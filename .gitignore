@@ -1,0 +1,7 @@
+# Please keep sections sorted.
+
+# Various common files to exclude.
+*~
+
+# More specific files/directories.
+/target/
