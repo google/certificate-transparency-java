@@ -233,25 +233,37 @@
             </plugin>
 
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>org.certificatetransparency.ctlog.CTLogClient</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
-                        <id>make-assembly</id> <!-- this is used for inheritance merges -->
-                        <phase>package</phase> <!-- bind to the packaging phase -->
+                        <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+
+                                <filter>
+                                    <artifact>commons-logging:commons-logging</artifact>
+                                    <includes>
+                                        <include>org/apache/commons/logging/**</include>
+                                    </includes>
+                                </filter>
+                            </filters>
+
+                            <finalName>ctlog-${project.version}-with-deps</finalName>
+                            <minimizeJar>true</minimizeJar>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
