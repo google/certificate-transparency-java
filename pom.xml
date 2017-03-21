@@ -254,11 +254,20 @@
                                     </excludes>
                                 </filter>
 
+                                <!-- Not explicitly referenced by the code, so
+                                     it gets stripped by minimizeJar. -->
                                 <filter>
                                     <artifact>commons-logging:commons-logging</artifact>
                                     <includes>
                                         <include>org/apache/commons/logging/**</include>
                                     </includes>
+                                </filter>
+
+                                <filter>
+                                    <artifact>com.google.protobuf:protobuf-java</artifact>
+                                    <excludes>
+                                        <exclude>**/*.proto</exclude>
+                                    </excludes>
                                 </filter>
                             </filters>
 
