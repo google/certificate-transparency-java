@@ -9,12 +9,12 @@
 
     <name>${project.groupId}:${project.artifactId}</name>
     <description>A application used to communicate with certificate transparency log servers.</description>
-    <url>http://certificate-transparency.org/</url>
+    <url>https://certificate-transparency.org/</url>
 
     <licenses>
         <license>
             <name>The Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
 
