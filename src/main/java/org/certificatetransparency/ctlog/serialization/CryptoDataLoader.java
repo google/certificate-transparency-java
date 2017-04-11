@@ -61,7 +61,7 @@ public class CryptoDataLoader {
    *
    * @param pemCertsFile File to parse.
    * @return A list of certificates from the certificates in the file.
-   * @throws FileNotFoundException If the file is not present.
+   * @throws InvalidInputException If the file is not present.
    */
   public static List<Certificate> certificatesFromFile(File pemCertsFile) {
     try {

@@ -210,8 +210,8 @@ public class HttpLogClient {
 
   /**
    * Retrieve Entry+Merkle Audit Proof from Log.
-   * @param leaf_index The index of the desired entry.
-   * @param tree_size The tree_size of the tree for which the proof is desired.
+   * @param leafindex The index of the desired entry.
+   * @param treeSize The tree_size of the tree for which the proof is desired.
    * @return ParsedLog entry object with proof.
    */
   public ParsedLogEntryWithProof getLogEntryAndProof(long leafindex, long treeSize) {
