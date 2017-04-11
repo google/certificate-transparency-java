@@ -1,0 +1,5 @@
+language: java
+jdk:
+  - oraclejdk8
+# Override the default installer; we don't want `mvn install` to run.
+install: true
