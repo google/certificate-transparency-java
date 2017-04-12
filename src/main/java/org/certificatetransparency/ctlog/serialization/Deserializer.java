@@ -295,8 +295,8 @@ public class Deserializer {
   /**
    * Calculates the number of bytes needed to hold the given number:
    * ceil(log2(maxDataLength)) / 8
-   * @param maxDataLength
-   * @return
+   * @param maxDataLength the number that needs to be represented as bytes
+   * @return Number of bytes needed to represent the given number
    */
   public static int bytesForDataLength(int maxDataLength) {
     return (int) (Math.ceil(Math.log(maxDataLength) / Math.log(2)) / 8);
