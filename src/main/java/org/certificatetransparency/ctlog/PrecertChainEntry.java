@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.certificatetransparency.ctlog.PreCert;
 
-
 public class PrecertChainEntry {
   // The chain certifying the precertificate, as submitted by the CA.
   public List<byte[]> precertificateChain;

@@ -1,8 +1,6 @@
 package org.certificatetransparency.ctlog.serialization;
 
-/**
- * Constants used for serializing and de-serializing.
- */
+/** Constants used for serializing and de-serializing. */
 public class CTConstants {
   // All in bytes.
   public static final int MAX_EXTENSIONS_LENGTH = (1 << 16) - 1;

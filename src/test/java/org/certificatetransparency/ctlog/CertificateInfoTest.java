@@ -14,9 +14,7 @@ import org.junit.runners.JUnit4;
 
 import java.security.cert.Certificate;
 
-/**
- * Make sure the correct info about certificates is provided.
- */
+/** Make sure the correct info about certificates is provided. */
 @RunWith(JUnit4.class)
 public class CertificateInfoTest {
   @Test
@@ -36,5 +34,4 @@ public class CertificateInfoTest {
     assertTrue(CertificateInfo.isPreCertificate(preCertificate));
     assertFalse(CertificateInfo.isPreCertificate(regularCert));
   }
-
 }

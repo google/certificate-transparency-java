@@ -27,9 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
-/**
- * A CT HTTP client. Abstracts away the json encoding necessary for the server.
- */
+/** A CT HTTP client. Abstracts away the json encoding necessary for the server. */
 public class HttpLogClient {
   private static final String ADD_PRE_CHAIN_PATH = "add-pre-chain";
   private static final String ADD_CHAIN_PATH = "add-chain";
@@ -44,6 +42,7 @@ public class HttpLogClient {
 
   /**
    * New HttpLogClient.
+   *
    * @param logUrl CT Log's full URL, e.g. "http://ct.googleapis.com/pilot/ct/v1/"
    */
   public HttpLogClient(String logUrl) {
@@ -52,6 +51,7 @@ public class HttpLogClient {
 
   /**
    * For testing specify an HttpInvoker
+   *
    * @param logUrl URL of the log.
    * @param postInvoker HttpInvoker instance to use.
    */
@@ -62,6 +62,7 @@ public class HttpLogClient {
 
   /**
    * JSON-encodes the list of certificates into a JSON object.
+   *
    * @param certs Certificates to encode.
    * @return A JSON object with one field, "chain", holding a JSON array of base64-encoded certs.
    */
@@ -94,14 +95,13 @@ public class HttpLogClient {
     }
 
     JSONObject parsedResponse = (JSONObject) JSONValue.parse(responseBody);
-    Ct.SignedCertificateTimestamp.Builder builder =
-        Ct.SignedCertificateTimestamp.newBuilder();
+    Ct.SignedCertificateTimestamp.Builder builder = Ct.SignedCertificateTimestamp.newBuilder();
 
     int numericVersion = ((Number) parsedResponse.get("sct_version")).intValue();
     Ct.Version version = Ct.Version.valueOf(numericVersion);
     if (version == null) {
-      throw new IllegalArgumentException(String.format("Input JSON has an invalid version: %d",
-          numericVersion));
+      throw new IllegalArgumentException(
+          String.format("Input JSON has an invalid version: %d", numericVersion));
     }
     builder.setVersion(version);
     Ct.LogID.Builder logIdBuilder = Ct.LogID.newBuilder();
@@ -123,20 +123,20 @@ public class HttpLogClient {
 
   /**
    * Adds a certificate to the log.
+   *
    * @param certificatesChain The certificate chain to add.
    * @return SignedCertificateTimestamp if the log added the chain successfully.
    */
   public Ct.SignedCertificateTimestamp addCertificate(List<Certificate> certificatesChain) {
-    Preconditions.checkArgument(!certificatesChain.isEmpty(),
-        "Must have at least one certificate to submit.");
+    Preconditions.checkArgument(
+        !certificatesChain.isEmpty(), "Must have at least one certificate to submit.");
 
     boolean isPreCertificate = CertificateInfo.isPreCertificate(certificatesChain.get(0));
-    if (isPreCertificate &&
-        CertificateInfo.isPreCertificateSigningCert(certificatesChain.get(1))) {
+    if (isPreCertificate && CertificateInfo.isPreCertificateSigningCert(certificatesChain.get(1))) {
       Preconditions.checkArgument(
           certificatesChain.size() >= 3,
-          "When signing a PreCertificate with a PreCertificate Signing Cert," +
-              " the issuer certificate must follow.");
+          "When signing a PreCertificate with a PreCertificate Signing Cert,"
+              + " the issuer certificate must follow.");
     }
 
     return addCertificate(certificatesChain, isPreCertificate);
@@ -157,8 +157,9 @@ public class HttpLogClient {
   }
 
   /**
-   * Retrieves Latest Signed Tree Head from the log.
-   * The signature of the Signed Tree Head component is not verified.
+   * Retrieves Latest Signed Tree Head from the log. The signature of the Signed Tree Head component
+   * is not verified.
+   *
    * @return latest STH
    */
   public SignedTreeHead getLogSTH() {
@@ -168,6 +169,7 @@ public class HttpLogClient {
 
   /**
    * Retrieves accepted Root Certificates.
+   *
    * @return a list of root certificates.
    */
   public List<Certificate> getLogRoots() {
@@ -178,6 +180,7 @@ public class HttpLogClient {
 
   /**
    * Retrieve Entries from Log.
+   *
    * @param start 0-based index of first entry to retrieve, in decimal.
    * @param end 0-based index of last entry to retrieve, in decimal.
    * @return list of Log's entries.
@@ -185,8 +188,8 @@ public class HttpLogClient {
   public List<ParsedLogEntry> getLogEntries(long start, long end) {
     Preconditions.checkArgument(0 <= start && end >= start);
 
-    List<NameValuePair> params = createParamsList("start", "end", Long.toString(start),
-      Long.toString(end));
+    List<NameValuePair> params =
+        createParamsList("start", "end", Long.toString(start), Long.toString(end));
 
     String response = postInvoker.makeGetRequest(logUrl + GET_ENTRIES, params);
     return parseLogEntries(response);
@@ -194,6 +197,7 @@ public class HttpLogClient {
 
   /**
    * Retrieve Merkle Consistency Proof between Two Signed Tree Heads.
+   *
    * @param first The tree_size of the first tree, in decimal.
    * @param second The tree_size of the second tree, in decimal.
    * @return A list of base64 decoded Merkle Tree nodes serialized to ByteString objects.
@@ -201,8 +205,8 @@ public class HttpLogClient {
   public List<ByteString> getSTHConsistency(long first, long second) {
     Preconditions.checkArgument(0 <= first && second >= first);
 
-    List<NameValuePair> params = createParamsList("first", "second", Long.toString(first),
-      Long.toString(second));
+    List<NameValuePair> params =
+        createParamsList("first", "second", Long.toString(first), Long.toString(second));
 
     String response = postInvoker.makeGetRequest(logUrl + GET_STH_CONSISTENCY, params);
     return parseConsistencyProof(response);
@@ -210,6 +214,7 @@ public class HttpLogClient {
 
   /**
    * Retrieve Entry+Merkle Audit Proof from Log.
+   *
    * @param leafindex The index of the desired entry.
    * @param treeSize The tree_size of the tree for which the proof is desired.
    * @return ParsedLog entry object with proof.
@@ -217,27 +222,32 @@ public class HttpLogClient {
   public ParsedLogEntryWithProof getLogEntryAndProof(long leafindex, long treeSize) {
     Preconditions.checkArgument(0 <= leafindex && treeSize >= leafindex);
 
-    List<NameValuePair> params = createParamsList("leaf_index", "tree_size",
-      Long.toString(leafindex), Long.toString(treeSize));
+    List<NameValuePair> params =
+        createParamsList(
+            "leaf_index", "tree_size", Long.toString(leafindex), Long.toString(treeSize));
 
     String response = postInvoker.makeGetRequest(logUrl + GET_ENTRY_AND_PROOF, params);
     JSONObject entry = (JSONObject) JSONValue.parse(response);
     JSONArray auditPath = (JSONArray) entry.get("audit_path");
 
-    return Deserializer.parseLogEntryWithProof(jsonToLogEntry.apply(entry), auditPath, leafindex,
-      treeSize);
+    return Deserializer.parseLogEntryWithProof(
+        jsonToLogEntry.apply(entry), auditPath, leafindex, treeSize);
   }
 
   /**
    * Creates a list of NameValuePair objects.
+   *
    * @param firstParamName The first parameter name.
    * @param firstParamValue The first parameter value.
    * @param secondParamName The second parameter name.
    * @param secondParamValue The second parameter value.
    * @return A list of NameValuePair objects.
    */
-  private List<NameValuePair> createParamsList(String firstParamName, String secondParamName,
-    String firstParamValue, String secondParamValue) {
+  private List<NameValuePair> createParamsList(
+      String firstParamName,
+      String secondParamName,
+      String firstParamValue,
+      String secondParamValue) {
     List<NameValuePair> params = new ArrayList<NameValuePair>();
     params.add(new BasicNameValuePair(firstParamName, firstParamValue));
     params.add(new BasicNameValuePair(secondParamName, secondParamValue));
@@ -246,6 +256,7 @@ public class HttpLogClient {
 
   /**
    * Parses CT log's response for "get-entries" into a list of {@link ParsedLogEntry} objects.
+   *
    * @param response Log response to pars.
    * @return list of Log's entries.
    */
@@ -259,19 +270,21 @@ public class HttpLogClient {
   }
 
   private Function<JSONObject, ParsedLogEntry> jsonToLogEntry =
-    new Function<JSONObject, ParsedLogEntry>() {
-    @Override public ParsedLogEntry apply(JSONObject entry) {
-      String leaf = (String) entry.get("leaf_input");
-      String extra = (String) entry.get("extra_data");
+      new Function<JSONObject, ParsedLogEntry>() {
+        @Override
+        public ParsedLogEntry apply(JSONObject entry) {
+          String leaf = (String) entry.get("leaf_input");
+          String extra = (String) entry.get("extra_data");
 
-      return Deserializer.parseLogEntry(
-        new ByteArrayInputStream(Base64.decodeBase64(leaf)),
-        new ByteArrayInputStream(Base64.decodeBase64(extra)));
-      }
-    };
+          return Deserializer.parseLogEntry(
+              new ByteArrayInputStream(Base64.decodeBase64(leaf)),
+              new ByteArrayInputStream(Base64.decodeBase64(extra)));
+        }
+      };
 
   /**
    * Parses CT log's response for the "get-sth-consistency" request.
+   *
    * @param response JsonObject containing an array of Merkle Tree nodes.
    * @return A list of base64 decoded Merkle Tree nodes serialized to ByteString objects.
    */
@@ -282,7 +295,7 @@ public class HttpLogClient {
     JSONArray arr = (JSONArray) responseJson.get("consistency");
 
     List<ByteString> proof = new ArrayList<ByteString>();
-    for(Object node: arr) {
+    for (Object node : arr) {
       proof.add(ByteString.copyFrom(Base64.decodeBase64((String) node)));
     }
     return proof;
@@ -290,20 +303,23 @@ public class HttpLogClient {
 
   /**
    * Parses CT log's response for "get-sth" into a proto object.
+   *
    * @param sthResponse Log response to parse
    * @return a proto object of SignedTreeHead type.
    */
   SignedTreeHead parseSTHResponse(String sthResponse) {
     Preconditions.checkNotNull(
-      sthResponse, "Sign Tree Head response from a CT log should not be null");
+        sthResponse, "Sign Tree Head response from a CT log should not be null");
 
     JSONObject response = (JSONObject) JSONValue.parse(sthResponse);
     long treeSize = (Long) response.get("tree_size");
     long timestamp = (Long) response.get("timestamp");
     if (treeSize < 0 || timestamp < 0) {
       throw new CertificateTransparencyException(
-        String.format("Bad response. Size of tree or timestamp cannot be a negative value. "
-          + "Log Tree size: %d Timestamp: %d", treeSize, timestamp));
+          String.format(
+              "Bad response. Size of tree or timestamp cannot be a negative value. "
+                  + "Log Tree size: %d Timestamp: %d",
+              treeSize, timestamp));
     }
     String base64Signature = (String) response.get("tree_head_signature");
     String sha256RootHash = (String) response.get("sha256_root_hash");
@@ -312,13 +328,17 @@ public class HttpLogClient {
     sth.treeSize = treeSize;
     sth.timestamp = timestamp;
     sth.sha256RootHash = Base64.decodeBase64(sha256RootHash);
-    sth.signature = Deserializer.parseDigitallySignedFromBinary(new ByteArrayInputStream(Base64.decodeBase64(base64Signature)));
+    sth.signature =
+        Deserializer.parseDigitallySignedFromBinary(
+            new ByteArrayInputStream(Base64.decodeBase64(base64Signature)));
 
     if (sth.sha256RootHash.length != 32) {
-       throw new CertificateTransparencyException(
-         String.format("Bad response. The root hash of the Merkle Hash Tree must be 32 bytes. "
-           + "The size of the root hash is %d", sth.sha256RootHash.length));
-      }
+      throw new CertificateTransparencyException(
+          String.format(
+              "Bad response. The root hash of the Merkle Hash Tree must be 32 bytes. "
+                  + "The size of the root hash is %d",
+              sth.sha256RootHash.length));
+    }
     return sth;
   }
 
@@ -334,15 +354,16 @@ public class HttpLogClient {
     JSONObject entries = (JSONObject) JSONValue.parse(response);
     JSONArray entriesArray = (JSONArray) entries.get("certificates");
 
-    for(Object i: entriesArray) {
+    for (Object i : entriesArray) {
       // We happen to know that JSONArray contains strings.
       byte[] in = Base64.decodeBase64((String) i);
       try {
-        certs.add(CertificateFactory.getInstance("X509").generateCertificate(
-          new ByteArrayInputStream(in)));
+        certs.add(
+            CertificateFactory.getInstance("X509")
+                .generateCertificate(new ByteArrayInputStream(in)));
       } catch (CertificateException e) {
         throw new CertificateTransparencyException(
-          "Malformed data from a CT log have been received: " + e.getLocalizedMessage(), e);
+            "Malformed data from a CT log have been received: " + e.getLocalizedMessage(), e);
       }
     }
     return certs;

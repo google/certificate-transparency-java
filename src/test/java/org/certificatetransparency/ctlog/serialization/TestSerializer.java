@@ -14,9 +14,7 @@ import org.junit.runners.JUnit4;
 
 import java.io.IOException;
 
-/**
- * Test serialization.
- */
+/** Test serialization. */
 @RunWith(JUnit4.class)
 public class TestSerializer {
   public static final String TEST_CERT_SCT = "/testdata/test-cert.proof";
@@ -28,12 +26,14 @@ public class TestSerializer {
     builder.setTimestamp(1365181456089L);
 
     String keyIdBase64 = "3xwuwRUAlFJHqWFoMl3cXHlZ6PfG04j8AC4LvT9012Q=";
-    builder.setId(Ct.LogID.newBuilder().setKeyId(
-        ByteString.copyFrom(Base64.decodeBase64(keyIdBase64))).build());
+    builder.setId(
+        Ct.LogID.newBuilder()
+            .setKeyId(ByteString.copyFrom(Base64.decodeBase64(keyIdBase64)))
+            .build());
 
     String signatureBase64 =
-        "MEUCIGBuEK5cLVobCu1J3Ek39I3nGk6XhOnCCN+/6e9TbPfy" +
-        "AiEAvrKcctfQbWHQa9s4oGlGmqhv4S4Yu3zEVomiwBh+9aU=";
+        "MEUCIGBuEK5cLVobCu1J3Ek39I3nGk6XhOnCCN+/6e9TbPfy"
+            + "AiEAvrKcctfQbWHQa9s4oGlGmqhv4S4Yu3zEVomiwBh+9aU=";
 
     Ct.DigitallySigned.Builder signatureBuilder = Ct.DigitallySigned.newBuilder();
     signatureBuilder.setHashAlgorithm(Ct.DigitallySigned.HashAlgorithm.SHA256);

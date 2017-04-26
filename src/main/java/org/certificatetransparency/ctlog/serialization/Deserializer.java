@@ -20,14 +20,13 @@ import org.json.simple.JSONArray;
 import java.io.IOException;
 import java.io.InputStream;
 
-/**
- * Converting binary data to CT structures.
- */
+/** Converting binary data to CT structures. */
 public class Deserializer {
   public static final int TIMESTAMPED_ENTRY_LEAF_TYPE = 0;
 
   /**
    * Parses a SignedCertificateTimestamp from binary encoding.
+   *
    * @param inputStream byte stream of binary encoding.
    * @return Built CT.SignedCertificateTimestamp
    * @throws SerializationException if the data stream is too short.
@@ -56,6 +55,7 @@ public class Deserializer {
 
   /**
    * Parses a Ct.DigitallySigned from binary encoding.
+   *
    * @param inputStream byte stream of binary encoding.
    * @return Built Ct.DigitallySigned
    * @throws SerializationException if the data stream is too short.
@@ -88,19 +88,20 @@ public class Deserializer {
 
   /**
    * Parses an entry retrieved from Log and it's audit proof.
+   *
    * @param entry ParsedLogEntry instance.
-   * @param proof An array of base64-encoded Merkle Tree nodes proving the inclusion of the
-   * chosen certificate.
+   * @param proof An array of base64-encoded Merkle Tree nodes proving the inclusion of the chosen
+   *     certificate.
    * @param leafIndex The index of the desired entry.
    * @param treeSize The tree size of the tree for which the proof is desired.
    * @return {@link ParsedLogEntryWithProof}
    */
-  public static ParsedLogEntryWithProof parseLogEntryWithProof(ParsedLogEntry entry,
-    JSONArray proof, long leafIndex, long treeSize) {
+  public static ParsedLogEntryWithProof parseLogEntryWithProof(
+      ParsedLogEntry entry, JSONArray proof, long leafIndex, long treeSize) {
 
     MerkleAuditProof audit_proof = new MerkleAuditProof(Ct.Version.V1, treeSize, leafIndex);
 
-    for (Object node: proof) {
+    for (Object node : proof) {
       audit_proof.pathNode.add(Base64.decodeBase64((String) node));
     }
     return ParsedLogEntryWithProof.newInstance(entry, audit_proof);
@@ -108,8 +109,9 @@ public class Deserializer {
 
   /**
    * Parses an entry retrieved from Log.
+   *
    * @param merkleTreeLeaf MerkleTreeLeaf structure, byte stream of binary encoding.
-   * @param extraData extra data,  byte stream of binary encoding.
+   * @param extraData extra data, byte stream of binary encoding.
    * @return {@link ParsedLogEntry}
    */
   public static ParsedLogEntry parseLogEntry(InputStream merkleTreeLeaf, InputStream extraData) {
@@ -119,12 +121,12 @@ public class Deserializer {
     Ct.LogEntryType entryType = treeLeaf.timestampedEntry.entryType;
 
     if (entryType == Ct.LogEntryType.X509_ENTRY) {
-      X509ChainEntry x509EntryChain = parseX509ChainEntry(extraData,
-          treeLeaf.timestampedEntry.signedEntry.x509);
+      X509ChainEntry x509EntryChain =
+          parseX509ChainEntry(extraData, treeLeaf.timestampedEntry.signedEntry.x509);
       logEntry.x509Entry = x509EntryChain;
     } else if (entryType == Ct.LogEntryType.PRECERT_ENTRY) {
-      PrecertChainEntry preCertChain = parsePrecertChainEntry(extraData,
-          treeLeaf.timestampedEntry.signedEntry.preCert);
+      PrecertChainEntry preCertChain =
+          parsePrecertChainEntry(extraData, treeLeaf.timestampedEntry.signedEntry.preCert);
       logEntry.precertEntry = preCertChain;
     } else {
       throw new SerializationException(String.format("Unknown entry type: %d", entryType));
@@ -135,6 +137,7 @@ public class Deserializer {
 
   /**
    * Parses a {@link MerkleTreeLeaf} from binary encoding.
+   *
    * @param in byte stream of binary encoding.
    * @return Built {@link MerkleTreeLeaf}.
    * @throws SerializationException if the data stream is too short.
@@ -155,6 +158,7 @@ public class Deserializer {
 
   /**
    * Parses a {@link TimestampedEntry} from binary encoding.
+   *
    * @param in byte stream of binary encoding.
    * @return Built {@link TimestampedEntry}.
    * @throws SerializationException if the data stream is too short.
@@ -191,6 +195,7 @@ public class Deserializer {
 
   /**
    * Parses X509ChainEntry structure.
+   *
    * @param in X509ChainEntry structure, byte stream of binary encoding.
    * @param x509Cert leaf certificate.
    * @throws SerializationException if an I/O error occurs.
@@ -217,6 +222,7 @@ public class Deserializer {
 
   /**
    * Parses PrecertChainEntry structure.
+   *
    * @param in PrecertChainEntry structure, byte stream of binary encoding.
    * @param preCert Precertificate.
    * @return {@link PrecertChainEntry} object.
@@ -234,16 +240,15 @@ public class Deserializer {
         preCertChain.precertificateChain.add(readFixedLength(in, length));
       }
     } catch (IOException e) {
-      throw new SerializationException("Cannot parse PrecertEntryChain."
-        + e.getLocalizedMessage());
+      throw new SerializationException("Cannot parse PrecertEntryChain." + e.getLocalizedMessage());
     }
     return preCertChain;
   }
 
   /**
-   * Reads a variable-length byte array with a maximum length.
-   * The length is read (based on the number of bytes needed to represent the max data length)
-   * then the byte array itself.
+   * Reads a variable-length byte array with a maximum length. The length is read (based on the
+   * number of bytes needed to represent the max data length) then the byte array itself.
+   *
    * @param inputStream byte stream of binary encoding.
    * @param maxDataLength Maximal data length.
    * @return read byte array.
@@ -264,8 +269,8 @@ public class Deserializer {
     }
 
     if (bytesRead != dataLength) {
-      throw new SerializationException(String.format("Incomplete data. Expected %d bytes, had %d.",
-          dataLength, bytesRead));
+      throw new SerializationException(
+          String.format("Incomplete data. Expected %d bytes, had %d.", dataLength, bytesRead));
     }
 
     return rawData;
@@ -273,6 +278,7 @@ public class Deserializer {
 
   /**
    * Reads a fixed-length byte array.
+   *
    * @param inputStream byte stream of binary encoding.
    * @param dataLength exact data length.
    * @return read byte array.
@@ -293,8 +299,8 @@ public class Deserializer {
   }
 
   /**
-   * Calculates the number of bytes needed to hold the given number:
-   * ceil(log2(maxDataLength)) / 8
+   * Calculates the number of bytes needed to hold the given number: ceil(log2(maxDataLength)) / 8
+   *
    * @param maxDataLength the number that needs to be represented as bytes
    * @return Number of bytes needed to represent the given number
    */
@@ -304,6 +310,7 @@ public class Deserializer {
 
   /**
    * Read a number of numBytes bytes (Assuming MSB first).
+   *
    * @param inputStream byte stream of binary encoding.
    * @param numBytes exact number of bytes representing this number.
    * @return a number of at most 2^numBytes
@@ -319,7 +326,7 @@ public class Deserializer {
           throw new SerializationException(
               String.format("Missing length bytes: Expected %d, got %d.", numBytes, i));
         }
-        toReturn = (toReturn <<  8) | valRead;
+        toReturn = (toReturn << 8) | valRead;
       }
       return toReturn;
     } catch (IOException e) {

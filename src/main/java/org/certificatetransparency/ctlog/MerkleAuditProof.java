@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.certificatetransparency.ctlog.proto.Ct;
 
-
 public class MerkleAuditProof {
   public Ct.Version version;
   public long treeSize;

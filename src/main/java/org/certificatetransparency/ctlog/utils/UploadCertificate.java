@@ -15,16 +15,16 @@ import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.List;
 
-/**
- * Utility class for uploading a certificate.
- */
+/** Utility class for uploading a certificate. */
 public class UploadCertificate {
   public static void main(String[] args)
       throws IOException, CertificateException, InvalidKeySpecException, NoSuchAlgorithmException,
-      InvalidKeyException, SignatureException {
+          InvalidKeyException, SignatureException {
     if (args.length < 1) {
-      System.out.println(String.format("Usage: %s <certificates chain> [output file]",
-          UploadCertificate.class.getSimpleName()));
+      System.out.println(
+          String.format(
+              "Usage: %s <certificates chain> [output file]",
+              UploadCertificate.class.getSimpleName()));
       return;
     }
 

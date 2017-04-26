@@ -9,9 +9,8 @@ import java.security.PublicKey;
 import java.util.Arrays;
 
 /**
- * Holds information about the log: Mainly, its public key and log ID (which is calculated
- * from the Log ID).
- * Ideally created from a file with the Log's public key in PEM encoding.
+ * Holds information about the log: Mainly, its public key and log ID (which is calculated from the
+ * Log ID). Ideally created from a file with the Log's public key in PEM encoding.
  */
 public class LogInfo {
   private final PublicKey logKey;
@@ -55,8 +54,7 @@ public class LogInfo {
   }
 
   /**
-   * Creates a LogInfo instance from the Log's public key file.
-   * Supports both EC and RSA keys.
+   * Creates a LogInfo instance from the Log's public key file. Supports both EC and RSA keys.
    *
    * @param pemKeyFilePath Path of the log's public key file.
    * @return new LogInfo instance.

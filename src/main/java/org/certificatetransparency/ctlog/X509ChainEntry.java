@@ -3,7 +3,6 @@ package org.certificatetransparency.ctlog;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class X509ChainEntry {
   // For V1 this entry just includes the certificate in the
   // leaf_certificate field

@@ -11,17 +11,12 @@ import java.io.IOException;
 import java.security.cert.Certificate;
 import java.util.List;
 
-/**
- * The main CT log client. Currently only knows how to upload certificate chains
- * to the ctlog.
- */
+/** The main CT log client. Currently only knows how to upload certificate chains to the ctlog. */
 public class CTLogClient {
   private final HttpLogClient httpClient;
   private final LogSignatureVerifier signatureVerifier;
 
-  /**
-   * Result of the certificate upload. Contains the SCT and verification result.
-   */
+  /** Result of the certificate upload. Contains the SCT and verification result. */
   public static class UploadResult {
     private final Ct.SignedCertificateTimestamp sct;
     private final boolean verified;
@@ -53,8 +48,9 @@ public class CTLogClient {
   public static void main(String[] args) throws IOException {
     if (args.length < 3) {
       System.out.println(
-          String.format("Usage: %s <Certificate chain> <Log URL> <Log public key> [output file]",
-          CTLogClient.class.getSimpleName()));
+          String.format(
+              "Usage: %s <Certificate chain> <Log URL> <Log public key> [output file]",
+              CTLogClient.class.getSimpleName()));
       return;
     }
 
