@@ -8,14 +8,12 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.List;
 
-/**
- * Utility class for printing certificate chains. Openssl is probably better for this.
- */
+/** Utility class for printing certificate chains. Openssl is probably better for this. */
 public class PrintCertificates {
   public static void main(String[] args) throws IOException, CertificateException {
     if (args.length < 1) {
-      System.out.println(String.format("Usage: %s <certificate chain>",
-          PrintCertificates.class.getSimpleName()));
+      System.out.println(
+          String.format("Usage: %s <certificate chain>", PrintCertificates.class.getSimpleName()));
       return;
     }
 

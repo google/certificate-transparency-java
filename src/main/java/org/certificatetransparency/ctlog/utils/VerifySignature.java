@@ -14,14 +14,14 @@ import java.io.IOException;
 import java.security.cert.Certificate;
 import java.util.List;
 
-/**
- * Utility for verifying a log's signature from an SCT.
- */
+/** Utility for verifying a log's signature from an SCT. */
 public class VerifySignature {
   public static void main(String[] args) throws IOException {
     if (args.length < 3) {
-      System.out.println(String.format("Usage: %s <certificates chain> <sct> <log public key>",
-          VerifySignature.class.getSimpleName()));
+      System.out.println(
+          String.format(
+              "Usage: %s <certificates chain> <sct> <log public key>",
+              VerifySignature.class.getSimpleName()));
       return;
     }
 

@@ -35,16 +35,14 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-
-/**
- * Verifies signatures from a given CT Log.
- */
+/** Verifies signatures from a given CT Log. */
 public class LogSignatureVerifier {
   public static final String X509_AUTHORITY_KEY_IDENTIFIER = "2.5.29.35";
   private final LogInfo logInfo;
 
   /**
    * Creates a new LogSignatureVerifier which is associated with a single log.
+   *
    * @param logInfo information of the log this verifier is to be associated with.
    */
   public LogSignatureVerifier(LogInfo logInfo) {
@@ -58,7 +56,9 @@ public class LogSignatureVerifier {
     private final boolean issuedByPreCertificateSigningCert;
 
     IssuerInformation(
-        X500Name name, byte[] keyHash, Extension x509authorityKeyIdentifier,
+        X500Name name,
+        byte[] keyHash,
+        Extension x509authorityKeyIdentifier,
         boolean issuedByPreCertificateSigningCert) {
       this.name = name;
       this.keyHash = keyHash;
@@ -116,15 +116,17 @@ public class LogSignatureVerifier {
   }
 
   /**
-   * Verifies the CT Log's signature over the SCT and certificate.
-   * Works for the following cases:
-   * * Ordinary X509 certificate sent to the log.
-   * * PreCertificate signed by an ordinary CA certificate.
-   * * PreCertificate signed by a PreCertificate Signing Cert. In this case the PreCertificate
-   *   signing certificate must be 2nd on the chain, the CA cert itself 3rd.
+   * Verifies the CT Log's signature over the SCT and certificate. Works for the following cases:
    *
-   * It does not work for verifying a final certificate with the CT extension.
-   * TODO(eranm): Add the ability to remove the CT extension and verify a final certificate.
+   * <ul>
+   *   <li>Ordinary X509 certificate sent to the log.
+   *   <li>PreCertificate signed by an ordinary CA certificate.
+   *   <li>PreCertificate signed by a PreCertificate Signing Cert. In this case the PreCertificate
+   *       signing certificate must be 2nd on the chain, the CA cert itself 3rd.
+   * </ul>
+   *
+   * It does not work for verifying a final certificate with the CT extension. TODO(eranm): Add the
+   * ability to remove the CT extension and verify a final certificate.
    *
    * @param sct SignedCertificateTimestamp received from the log.
    * @param chain The certificates chain as sent to the log.
@@ -132,8 +134,9 @@ public class LogSignatureVerifier {
    */
   public boolean verifySignature(Ct.SignedCertificateTimestamp sct, List<Certificate> chain) {
     if (!logInfo.isSameLogId(sct.getId().getKeyId().toByteArray())) {
-      throw new CertificateTransparencyException(String.format(
-          "Log ID of SCT (%s) does not match this log's ID.", sct.getId().getKeyId()));
+      throw new CertificateTransparencyException(
+          String.format(
+              "Log ID of SCT (%s) does not match this log's ID.", sct.getId().getKeyId()));
     }
 
     X509Certificate leafCert = (X509Certificate) chain.get(0);
@@ -141,18 +144,19 @@ public class LogSignatureVerifier {
       byte[] toVerify = serializeSignedSCTData(leafCert, sct);
       return verifySCTSignatureOverBytes(sct, toVerify);
     } else {
-      Preconditions.checkArgument(chain.size() >= 2,
-          "Chain with PreCertificate must contain issuer.");
+      Preconditions.checkArgument(
+          chain.size() >= 2, "Chain with PreCertificate must contain issuer.");
       // PreCertificate
       Certificate issuerCert = chain.get(1);
       IssuerInformation issuerInformation;
       if (!CertificateInfo.isPreCertificateSigningCert(issuerCert)) {
         issuerInformation = issuerInformationFromCertificateIssuer(issuerCert);
       } else {
-        Preconditions.checkArgument(chain.size() >= 3,
+        Preconditions.checkArgument(
+            chain.size() >= 3,
             "Chain with PreCertificate signed by PreCertificate Signing Cert must contain issuer.");
-        issuerInformation = issuerInformationFromPreCertificateSigningCert(
-            issuerCert, getKeyHash(chain.get(2)));
+        issuerInformation =
+            issuerInformationFromPreCertificateSigningCert(issuerCert, getKeyHash(chain.get(2)));
       }
       return verifySCTOverPreCertificate(sct, leafCert, issuerInformation);
     }
@@ -160,14 +164,16 @@ public class LogSignatureVerifier {
 
   /**
    * Verifies the CT Log's signature over the SCT and leaf certificate.
+   *
    * @param sct SignedCertificateTimestamp received from the log.
    * @param leafCert leaf certificate sent to the log.
    * @return true if the log's signature over this SCT can be verified, false otherwise.
    */
   boolean verifySignature(Ct.SignedCertificateTimestamp sct, Certificate leafCert) {
     if (!logInfo.isSameLogId(sct.getId().getKeyId().toByteArray())) {
-      throw new CertificateTransparencyException(String.format(
-          "Log ID of SCT (%s) does not match this log's ID.", sct.getId().getKeyId()));
+      throw new CertificateTransparencyException(
+          String.format(
+              "Log ID of SCT (%s) does not match this log's ID.", sct.getId().getKeyId()));
     }
     byte[] toVerify = serializeSignedSCTData(leafCert, sct);
 
@@ -179,14 +185,15 @@ public class LogSignatureVerifier {
    *
    * @param sct SignedCertificateTimestamp received from the log.
    * @param preCertificate PreCertificate sent to the log for addition.
-   * @param issuerInfo Information on the issuer which will ultimately sign this PreCertificate.
-   *                   If the PreCertificate was signed using by a PreCertificate Signing Cert,
-   *                   the issuerInfo contains data on the final CA certificate used for signing.
+   * @param issuerInfo Information on the issuer which will ultimately sign this PreCertificate. If
+   *     the PreCertificate was signed using by a PreCertificate Signing Cert, the issuerInfo
+   *     contains data on the final CA certificate used for signing.
    * @return true if the SCT verifies, false otherwise.
    */
-  boolean verifySCTOverPreCertificate(Ct.SignedCertificateTimestamp sct,
-                                      X509Certificate preCertificate,
-                                      IssuerInformation issuerInfo) {
+  boolean verifySCTOverPreCertificate(
+      Ct.SignedCertificateTimestamp sct,
+      X509Certificate preCertificate,
+      IssuerInformation issuerInfo) {
     Preconditions.checkNotNull(issuerInfo, "At the very least, the issuer key hash is needed.");
     //TODO(eranm): Remove this restriction after this method knows how to strip the CT
     // extension from a final certificate.
@@ -196,8 +203,9 @@ public class LogSignatureVerifier {
 
     TBSCertificate preCertificateTBS = createTbsForVerification(preCertificate, issuerInfo);
     try {
-      byte[] toVerify = serializeSignedSCTDataForPreCertificate(
-          preCertificateTBS.getEncoded(), issuerInfo.getKeyHash(), sct);
+      byte[] toVerify =
+          serializeSignedSCTDataForPreCertificate(
+              preCertificateTBS.getEncoded(), issuerInfo.getKeyHash(), sct);
       return verifySCTSignatureOverBytes(sct, toVerify);
     } catch (IOException e) {
       throw new CertificateTransparencyException(
@@ -218,14 +226,15 @@ public class LogSignatureVerifier {
       // Make sure that we have the X509akid of the real issuer if:
       // The PreCertificate has this extension, AND:
       // The PreCertificate was signed by a PreCertificate signing cert.
-      if (hasX509AuthorityKeyIdentifier(parsedPreCertificate) &&
-          issuerInformation.issuedByPreCertificateSigningCert()) {
+      if (hasX509AuthorityKeyIdentifier(parsedPreCertificate)
+          && issuerInformation.issuedByPreCertificateSigningCert()) {
         Preconditions.checkArgument(issuerInformation.getX509authorityKeyIdentifier() != null);
       }
 
-      List<Extension> orderedExtensions = getExtensionsWithoutPoison(
-          parsedPreCertificate.getTBSCertificate().getExtensions(),
-          issuerInformation.getX509authorityKeyIdentifier());
+      List<Extension> orderedExtensions =
+          getExtensionsWithoutPoison(
+              parsedPreCertificate.getTBSCertificate().getExtensions(),
+              issuerInformation.getX509authorityKeyIdentifier());
 
       V3TBSCertificateGenerator tbsCertificateGenerator = new V3TBSCertificateGenerator();
       TBSCertificate tbsPart = parsedPreCertificate.getTBSCertificate();
@@ -245,7 +254,7 @@ public class LogSignatureVerifier {
       tbsCertificateGenerator.setIssuerUniqueID(tbsPart.getIssuerUniqueId());
       tbsCertificateGenerator.setSubjectUniqueID(tbsPart.getSubjectUniqueId());
       tbsCertificateGenerator.setExtensions(
-          new Extensions(orderedExtensions.toArray(new Extension[]{})));
+          new Extensions(orderedExtensions.toArray(new Extension[] {})));
       return tbsCertificateGenerator.generateTBSCertificate();
     } catch (CertificateException e) {
       throw new CertificateTransparencyException("Certificate error: " + e.getMessage(), e);
@@ -261,8 +270,7 @@ public class LogSignatureVerifier {
   }
 
   private List<Extension> getExtensionsWithoutPoison(
-      Extensions extensions,
-      Extension replacementX509authorityKeyIdentifier) {
+      Extensions extensions, Extension replacementX509authorityKeyIdentifier) {
     ASN1ObjectIdentifier[] extensionsOidsArray = extensions.getExtensionOIDs();
     Iterator<ASN1ObjectIdentifier> extensionsOids = Arrays.asList(extensionsOidsArray).iterator();
 
@@ -273,8 +281,8 @@ public class LogSignatureVerifier {
       String extnId = extn.getId();
       if (extnId.equals(CTConstants.POISON_EXTENSION_OID)) {
         // Do nothing - skip copying this extension
-      } else if ((extnId.equals(X509_AUTHORITY_KEY_IDENTIFIER)) &&
-          (replacementX509authorityKeyIdentifier != null)) {
+      } else if ((extnId.equals(X509_AUTHORITY_KEY_IDENTIFIER))
+          && (replacementX509authorityKeyIdentifier != null)) {
         // Use the real issuer's authority key identifier, since it's present.
         outputExtensions.add(replacementX509authorityKeyIdentifier);
       } else {
@@ -293,8 +301,7 @@ public class LogSignatureVerifier {
       sigAlg = "SHA256withRSA";
     } else {
       throw new CertificateTransparencyException(
-          String.format("Unsupported signature algorithm %s",
-              logInfo.getSignatureAlgorithm()));
+          String.format("Unsupported signature algorithm %s", logInfo.getSignatureAlgorithm()));
     }
 
     try {
@@ -303,18 +310,18 @@ public class LogSignatureVerifier {
       signature.update(toVerify);
       return signature.verify(sct.getSignature().getSignature().toByteArray());
     } catch (SignatureException e) {
-      throw new CertificateTransparencyException("Signature object not properly initialized or"
-          + " signature from SCT is improperly encoded.", e);
+      throw new CertificateTransparencyException(
+          "Signature object not properly initialized or"
+              + " signature from SCT is improperly encoded.",
+          e);
     } catch (InvalidKeyException e) {
       throw new CertificateTransparencyException("Log's public key cannot be used", e);
     } catch (NoSuchAlgorithmException e) {
-      throw new UnsupportedCryptoPrimitiveException(
-          sigAlg + " not supported by this JVM", e);
+      throw new UnsupportedCryptoPrimitiveException(sigAlg + " not supported by this JVM", e);
     }
   }
 
-  static byte[] serializeSignedSCTData(Certificate certificate,
-                                       Ct.SignedCertificateTimestamp sct) {
+  static byte[] serializeSignedSCTData(Certificate certificate, Ct.SignedCertificateTimestamp sct) {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     serializeCommonSCTFields(sct, bos);
     Serializer.writeUint(bos, Ct.LogEntryType.X509_ENTRY_VALUE, LOG_ENTRY_TYPE_LENGTH);
@@ -323,15 +330,13 @@ public class LogSignatureVerifier {
     } catch (CertificateEncodingException e) {
       throw new CertificateTransparencyException("Error encoding certificate", e);
     }
-    Serializer.writeVariableLength(bos, sct.getExtensions().toByteArray(),
-        MAX_EXTENSIONS_LENGTH);
+    Serializer.writeVariableLength(bos, sct.getExtensions().toByteArray(), MAX_EXTENSIONS_LENGTH);
 
     return bos.toByteArray();
   }
 
-  static byte[] serializeSignedSCTDataForPreCertificate(byte[] preCertBytes,
-                                                        byte[] issuerKeyHash,
-                                                        Ct.SignedCertificateTimestamp sct) {
+  static byte[] serializeSignedSCTDataForPreCertificate(
+      byte[] preCertBytes, byte[] issuerKeyHash, Ct.SignedCertificateTimestamp sct) {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     serializeCommonSCTFields(sct, bos);
     Serializer.writeUint(bos, Ct.LogEntryType.PRECERT_ENTRY_VALUE, LOG_ENTRY_TYPE_LENGTH);
@@ -352,8 +357,8 @@ public class LogSignatureVerifier {
 
   private static void serializeCommonSCTFields(
       Ct.SignedCertificateTimestamp sct, ByteArrayOutputStream bos) {
-    Preconditions.checkArgument(sct.getVersion().equals(Ct.Version.V1),
-        "Can only serialize SCT v1 for now.");
+    Preconditions.checkArgument(
+        sct.getVersion().equals(Ct.Version.V1), "Can only serialize SCT v1 for now.");
     Serializer.writeUint(bos, sct.getVersion().getNumber(), VERSION_LENGTH); // ct::V1
     Serializer.writeUint(bos, 0, 1); // ct::CERTIFICATE_TIMESTAMP
     Serializer.writeUint(bos, sct.getTimestamp(), TIMESTAMP_LENGTH); // Timestamp

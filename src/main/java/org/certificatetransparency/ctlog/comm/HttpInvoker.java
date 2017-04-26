@@ -12,12 +12,11 @@ import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
-/**
- * Simple delegator to HttpClient, so it can be mocked
- */
+/** Simple delegator to HttpClient, so it can be mocked */
 public class HttpInvoker {
   /**
    * Make an HTTP POST method call to the given URL with the provided JSON payload.
+   *
    * @param url URL for POST method
    * @param jsonPayload Serialized JSON payload.
    * @return Server's response body.
@@ -33,18 +32,20 @@ public class HttpInvoker {
       throw new LogCommunicationException("Error making POST request to " + url, e);
     }
   }
-  
+
   /**
    * Makes an HTTP GET method call to the given URL with the provides parameters.
+   *
    * @param url URL for GET method.
    * @return Server's response body.
    */
   public String makeGetRequest(String url) {
     return makeGetRequest(url, null);
   }
-  
+
   /**
    * Makes an HTTP GET method call to the given URL with the provides parameters.
+   *
    * @param url URL for GET method.
    * @param params query parameters.
    * @return Server's response body.

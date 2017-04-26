@@ -30,12 +30,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Class for reading various crypto structures off disk.
- */
+/** Class for reading various crypto structures off disk. */
 public class CryptoDataLoader {
   /**
    * Returns a list of certificates from an input stream of PEM-encoded certs.
+   *
    * @param pemStream input stream with PEM bytes
    * @return A list of certificates in the PEM file.
    */
@@ -49,7 +48,7 @@ public class CryptoDataLoader {
 
     try {
       Collection<? extends Certificate> certs = factory.generateCertificates(pemStream);
-      Certificate[] toReturn = certs.toArray(new Certificate[]{});
+      Certificate[] toReturn = certs.toArray(new Certificate[] {});
       return Arrays.asList(toReturn);
     } catch (CertificateException e) {
       throw new InvalidInputException("Not a valid PEM stream", e);
@@ -68,8 +67,7 @@ public class CryptoDataLoader {
       return parseCertificates(new BufferedInputStream(new FileInputStream(pemCertsFile)));
     } catch (FileNotFoundException e) {
       throw new InvalidInputException(
-          String.format("Could not find certificate chain file %s.", pemCertsFile),
-          e);
+          String.format("Could not find certificate chain file %s.", pemCertsFile), e);
     }
   }
 
@@ -77,8 +75,7 @@ public class CryptoDataLoader {
     //TODO(eranm): Filter out non PEM blocks.
     // Are the contents PEM-encoded?
     boolean correctHeader = pemLines.get(0).equals("-----BEGIN PUBLIC KEY-----");
-    boolean correctFooter = pemLines.get(pemLines.size() - 1)
-        .equals("-----END PUBLIC KEY-----");
+    boolean correctFooter = pemLines.get(pemLines.size() - 1).equals("-----END PUBLIC KEY-----");
     if (!correctHeader || !correctFooter) {
       throw new IllegalArgumentException(
           String.format("Input is not a PEM-encoded key file: " + pemLines));
@@ -102,23 +99,26 @@ public class CryptoDataLoader {
       throw new InvalidInputException("Log public key is invalid", e);
     }
   }
-  
-  /** Parses the beginning of a key, and determines the key algorithm (RSA or EC) based on the OID */
+
+  /**
+   * Parses the beginning of a key, and determines the key algorithm (RSA or EC) based on the OID
+   */
   private static String determineKeyAlg(byte[] keyBytes) {
-      ASN1Sequence seq = ASN1Sequence.getInstance(keyBytes);
-      DLSequence seq1 = (DLSequence) seq.getObjects().nextElement();
-      ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) seq1.getObjects().nextElement();
-      if (PKCSObjectIdentifiers.rsaEncryption.equals(oid)) {
-          return "RSA";
-      } else if (X9ObjectIdentifiers.id_ecPublicKey.equals(oid)) {
-          return "EC";
-      } else {
-          throw new IllegalArgumentException("Unsupported key type: " + oid);
-      }
+    ASN1Sequence seq = ASN1Sequence.getInstance(keyBytes);
+    DLSequence seq1 = (DLSequence) seq.getObjects().nextElement();
+    ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) seq1.getObjects().nextElement();
+    if (PKCSObjectIdentifiers.rsaEncryption.equals(oid)) {
+      return "RSA";
+    } else if (X9ObjectIdentifiers.id_ecPublicKey.equals(oid)) {
+      return "EC";
+    } else {
+      throw new IllegalArgumentException("Unsupported key type: " + oid);
+    }
   }
 
   /**
    * Load EC or RSA public key from a PEM file.
+   *
    * @param pemFile File containing the key.
    * @return Public key represented by this file.
    */
@@ -126,8 +126,7 @@ public class CryptoDataLoader {
     try {
       return parsePublicKey(Files.readLines(pemFile, Charset.defaultCharset()));
     } catch (IOException e) {
-      throw new InvalidInputException(
-          String.format("Error reading input file %s", pemFile), e);
+      throw new InvalidInputException(String.format("Error reading input file %s", pemFile), e);
     }
   }
 }

@@ -9,9 +9,7 @@ import java.io.FileReader;
 import java.security.cert.Certificate;
 import java.util.List;
 
-/**
- * Constants for tests.
- */
+/** Constants for tests. */
 @Ignore
 public class TestData {
   private static final String DATA_ROOT = "/testdata/";
