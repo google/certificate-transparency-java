@@ -13,11 +13,7 @@ import com.google.protobuf.ByteString;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
-import org.certificatetransparency.ctlog.CertificateTransparencyException;
-import org.certificatetransparency.ctlog.ParsedLogEntry;
-import org.certificatetransparency.ctlog.ParsedLogEntryWithProof;
-import org.certificatetransparency.ctlog.SignedTreeHead;
-import org.certificatetransparency.ctlog.TestData;
+import org.certificatetransparency.ctlog.*;
 import org.certificatetransparency.ctlog.proto.Ct;
 import org.certificatetransparency.ctlog.serialization.CryptoDataLoader;
 import org.json.simple.JSONArray;
@@ -30,7 +26,6 @@ import org.junit.runners.JUnit4;
 import org.mockito.Matchers;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.security.cert.Certificate;
@@ -103,6 +98,11 @@ public class HttpLogClientTest {
           + "i4Kd1F2QRIn18ADB8dHDmFYT9czQiRyf1HWkLxHqd81TbD26yWVXeGJPE3VICskovPkQNJ0tU4b03YmnKliibduyqQ"
           + "QkOFPOwqULg==\" } ] }";
 
+  public static final String MERKLE_AUDIT_PROOF =
+      "{\n"
+          + "\t\"leaf_index\":\"198743\",\n"
+          + "\t\"audit_path\": [\"MqsV9pJwuMVT1myDLQhy/u8y8yfjo2UIt/gULYIm9kw=\", \"iW2pKxYzPjwg1oqVS6bWKlrnkdsAbnYA4InJNUR4i0o=\", \"dmBMn0eQsFaAeXM/g/CE4awVonE9Bh12Eo3FAKngMqI=\", \"LyzJlb/OswwmACipg53qibS/xM36zPTSqFYyX/PQzRQ=\", \"VdnXYMjdTQg/YyDpahigAJvDzmxvXZNs4olmI2aPpSA=\", \"/WueKL8dlZICSRo/FLG9b/rINajZvrvwIYJMobx9x80=\", \"OCkOnssB2ZCE4RcSAnx0IvvZJYoxU+dgb1lm7OzjeIM=\", \"+2mouv9a2nWDISHvAIs+TAZxmZnDs1cOJ523yC29rj8=\", \"eBBZH33vXm/GQFs1HzGQ7nuMyGgnezv8cbAafXcAbSk=\", \"fQBUze8HOeBbS1bQiSe2PUqpuAj9uSHDMuM2qPsNaeo=\", \"mTkshaMzdhPHbmLOkTLd6SRe9AQmIhkBLfK3LbbYcMk=\", \"MvUpXVpfY/YlN8mca6BwZIVTmo4YAIumh2Frra0uybQ=\", \"CoxlxOr0JN7ZULFjBoHDQX129uMdCNSJk2az2e46oFE=\", \"4jCKz6dTAkMkaKy8uG1Y9IInCpL41Y8zBll2RNKXWm0=\", \"Q6iDW9iQXyefHaILfjAFPCjYR0kWca5MmPa8YoXV2zc=\", \"R9L2yHqkEI81e/D0QoDDw+T+ofaYwNAHTV0erxUlabs=\", \"TZI91NbHjlec2Hpoukwq1SOdVbzwEQ1/7IJAT0bB3ZI=\", \"bLlI5tybRk3WF+S2OQHfgwdZuqqJLAcPPWpp0Evj9qw=\", \"D2lTqW1O272aHIydgu9Bthn5MWYzlpWyHzKArIl7OxE=\", \"HWioeGEa+AwSRHCP4JPY/9xH2Z1+ezcwHbVsdko3uU8=\", \"0ydE3XEnELlBoXKgHtbJzyq1xbRNMOJtYJz1sQ4P2ho=\", \"rPCL+hjXx2zPjrkRFnvXlE6JhjKi9RnqyJ5j9X+Udds=\", \"R3TPvrSfIS3wf236bVFMKNAhKSsuScWnbSVcfsajYrs=\", \"0jLIygXEcuV2mAQLq9lluHdA9a5NGD3pMsyCphaPv/8=\", \"P6im7ddV3GvxchmJf16zAYzb6MvybJgOen3nm9Nrszg=\", \"wN/yk40mY/y5m/tdYR4OwVfN3HOqZC22v5jJrsvgnUI=\", \"jvqb4JzKxrbY9aXhbtsa27ufbaPK8U6j9yWKsFDsjJE=\", \"wrOTFjcFrRl1omqgJ9zibZuIz5FLnV0cdMoiONQyB4g=\"]\n"
+          + "}";
   public static final String LOG_ENTRY_AND_PROOF =
       "{\"leaf_input\": \"AAAAAAFHz32"
           + "CRgAAAALO"
@@ -426,5 +426,20 @@ public class HttpLogClientTest {
     assertEquals(2, entry.getAuditProof().pathNode.size());
     assertEquals(1, entry.getAuditProof().leafIndex);
     assertEquals(2, entry.getAuditProof().treeSize);
+  }
+
+  @Test
+  public void getLogProofByHash() throws Exception {
+    HttpInvoker mockInvoker = mock(HttpInvoker.class);
+    String merkleLeafHash = "YWhhc2g=";
+    List<NameValuePair> params2 = new ArrayList<>();
+    params2.add(new BasicNameValuePair("tree_size", Long.toString(40183)));
+    params2.add(new BasicNameValuePair("hash", merkleLeafHash));
+    when(mockInvoker.makeGetRequest(eq("http://ctlog/get-proof-by-hash"), eq(params2)))
+        .thenReturn(MERKLE_AUDIT_PROOF);
+    HttpLogClient client2 = new HttpLogClient("http://ctlog/", mockInvoker);
+    MerkleAuditProof auditProof = client2.getProofByEncodedHash(merkleLeafHash, 40183);
+    assertTrue(auditProof != null);
+    assertTrue(auditProof.leafIndex == 198743);
   }
 }

@@ -11,11 +11,7 @@ import java.util.List;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
-import org.certificatetransparency.ctlog.CertificateInfo;
-import org.certificatetransparency.ctlog.CertificateTransparencyException;
-import org.certificatetransparency.ctlog.ParsedLogEntry;
-import org.certificatetransparency.ctlog.ParsedLogEntryWithProof;
-import org.certificatetransparency.ctlog.SignedTreeHead;
+import org.certificatetransparency.ctlog.*;
 import org.certificatetransparency.ctlog.proto.Ct;
 import org.certificatetransparency.ctlog.serialization.Deserializer;
 import org.json.simple.JSONArray;
@@ -36,6 +32,7 @@ public class HttpLogClient {
   private static final String GET_ENTRIES = "get-entries";
   private static final String GET_STH_CONSISTENCY = "get-sth-consistency";
   private static final String GET_ENTRY_AND_PROOF = "get-entry-and-proof";
+  private static final String GET_PROOF_BY_HASH = "get-proof-by-hash";
 
   private final String logUrl;
   private final HttpInvoker postInvoker;
@@ -232,6 +229,39 @@ public class HttpLogClient {
 
     return Deserializer.parseLogEntryWithProof(
         jsonToLogEntry.apply(entry), auditPath, leafindex, treeSize);
+  }
+
+  /**
+   * Retrieve Merkle Audit Proof from Log by Merkel Leaf Hash.
+   *
+   * @param leafHash sha256 hash of MerkleTreeLeaf.
+   * @return MerkleAuditProof object.
+   */
+  public MerkleAuditProof getProofByHash(byte[] leafHash) {
+    Preconditions.checkArgument(leafHash != null && leafHash.length > 0);
+    String encodedMerkleLeafHash = Base64.encodeBase64String(leafHash);
+    SignedTreeHead sth = getLogSTH();
+    return getProofByEncodedHash(encodedMerkleLeafHash, sth.treeSize);
+  }
+
+  /**
+   * Retrieve Merkle Audit Proof from Log by Merkel Leaf Hash.
+   *
+   * @param encodedMerkleLeafHash Base64 encoded of sha256 hash of MerkleTreeLeaf.
+   * @param treeSize The tree_size of the tree for which the proof is desired. It can be fetched
+   *     from latest STH.
+   * @return MerkleAuditProof object.
+   */
+  public MerkleAuditProof getProofByEncodedHash(String encodedMerkleLeafHash, long treeSize) {
+    Preconditions.checkArgument(
+        encodedMerkleLeafHash != null && encodedMerkleLeafHash.length() > 0);
+    List<NameValuePair> params =
+        createParamsList("tree_size", "hash", Long.toString(treeSize), encodedMerkleLeafHash);
+    String response = postInvoker.makeGetRequest(logUrl + GET_PROOF_BY_HASH, params);
+    JSONObject entry = (JSONObject) JSONValue.parse(response);
+    JSONArray auditPath = (JSONArray) entry.get("audit_path");
+    long leafindex = Long.valueOf(String.valueOf(entry.get("leaf_index")));
+    return Deserializer.parseAuditProof(auditPath, leafindex, treeSize);
   }
 
   /**
