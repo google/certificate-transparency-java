@@ -11,7 +11,12 @@ import java.util.List;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
-import org.certificatetransparency.ctlog.*;
+import org.certificatetransparency.ctlog.CertificateInfo;
+import org.certificatetransparency.ctlog.CertificateTransparencyException;
+import org.certificatetransparency.ctlog.ParsedLogEntry;
+import org.certificatetransparency.ctlog.MerkleAuditProof;
+import org.certificatetransparency.ctlog.ParsedLogEntryWithProof;
+import org.certificatetransparency.ctlog.SignedTreeHead;
 import org.certificatetransparency.ctlog.proto.Ct;
 import org.certificatetransparency.ctlog.serialization.Deserializer;
 import org.json.simple.JSONArray;
@@ -232,7 +237,7 @@ public class HttpLogClient {
   }
 
   /**
-   * Retrieve Merkle Audit Proof from Log by Merkel Leaf Hash.
+   * Retrieve Merkle Audit Proof from Log by Merkle Leaf Hash.
    *
    * @param leafHash sha256 hash of MerkleTreeLeaf.
    * @return MerkleAuditProof object.
@@ -245,10 +250,10 @@ public class HttpLogClient {
   }
 
   /**
-   * Retrieve Merkle Audit Proof from Log by Merkel Leaf Hash.
+   * Retrieve Merkle Audit Proof from Log by Merkle Leaf Hash.
    *
    * @param encodedMerkleLeafHash Base64 encoded of sha256 hash of MerkleTreeLeaf.
-   * @param treeSize The tree_size of the tree for which the proof is desired. It can be fetched
+   * @param treeSize The tree_size of the tree for which the proof is desired. It can be obtained
    *     from latest STH.
    * @return MerkleAuditProof object.
    */
