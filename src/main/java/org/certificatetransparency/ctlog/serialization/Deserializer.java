@@ -108,6 +108,22 @@ public class Deserializer {
   }
 
   /**
+   * Parses the audit proof retrieved from Log.
+   *
+   * @param proof An array of base64-encoded Merkle Tree nodes proving the inclusion of the chosen
+   *     certificate.
+   * @param leafIndex The index of the desired entry.
+   * @param treeSize The tree size of the tree for which the proof is desired.
+   * @return {@link MerkleAuditProof}
+   */
+  public static MerkleAuditProof parseAuditProof(JSONArray proof, long leafIndex, long treeSize) {
+
+    MerkleAuditProof audit_proof = new MerkleAuditProof(Ct.Version.V1, treeSize, leafIndex);
+    proof.forEach(node -> audit_proof.pathNode.add(Base64.decodeBase64((String) node)));
+    return audit_proof;
+  }
+
+  /**
    * Parses an entry retrieved from Log.
    *
    * @param merkleTreeLeaf MerkleTreeLeaf structure, byte stream of binary encoding.
