@@ -26,7 +26,7 @@ public class LogInfo {
     logId = calculateLogId(logKey);
   }
 
-  byte[] getID() {
+  public byte[] getID() {
     return logId;
   }
 

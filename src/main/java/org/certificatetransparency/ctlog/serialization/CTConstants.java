@@ -16,4 +16,5 @@ public class CTConstants {
   // Useful OIDs
   public static final String PRECERTIFICATE_SIGNING_OID = "1.3.6.1.4.1.11129.2.4.4";
   public static final String POISON_EXTENSION_OID = "1.3.6.1.4.1.11129.2.4.3";
+  public static final String SCT_CERTIFICATE_OID = "1.3.6.1.4.1.11129.2.4.2";
 }

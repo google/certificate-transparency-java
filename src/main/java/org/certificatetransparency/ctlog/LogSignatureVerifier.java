@@ -6,19 +6,6 @@ import static org.certificatetransparency.ctlog.serialization.CTConstants.MAX_EX
 import static org.certificatetransparency.ctlog.serialization.CTConstants.TIMESTAMP_LENGTH;
 import static org.certificatetransparency.ctlog.serialization.CTConstants.VERSION_LENGTH;
 
-import com.google.common.base.Preconditions;
-
-import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.Extensions;
-import org.bouncycastle.asn1.x509.TBSCertificate;
-import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
-import org.certificatetransparency.ctlog.proto.Ct;
-import org.certificatetransparency.ctlog.serialization.CTConstants;
-import org.certificatetransparency.ctlog.serialization.Serializer;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.InvalidKeyException;
@@ -34,6 +21,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.util.ASN1Dump;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.asn1.x509.TBSCertificate;
+import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
+import org.bouncycastle.util.encoders.Base64;
+import org.certificatetransparency.ctlog.proto.Ct;
+import org.certificatetransparency.ctlog.serialization.CTConstants;
+import org.certificatetransparency.ctlog.serialization.Serializer;
+
+import com.google.common.base.Preconditions;
 
 /** Verifies signatures from a given CT Log. */
 public class LogSignatureVerifier {
@@ -133,33 +140,30 @@ public class LogSignatureVerifier {
    * @return true if the log's signature over this SCT can be verified, false otherwise.
    */
   public boolean verifySignature(Ct.SignedCertificateTimestamp sct, List<Certificate> chain) {
-    if (!logInfo.isSameLogId(sct.getId().getKeyId().toByteArray())) {
+    if (sct != null && !logInfo.isSameLogId(sct.getId().getKeyId().toByteArray())) {
       throw new CertificateTransparencyException(
           String.format(
-              "Log ID of SCT (%s) does not match this log's ID.", sct.getId().getKeyId()));
+              "Log ID of SCT (%s) does not match this log's ID (%s).",
+              Base64.toBase64String(sct.getId().getKeyId().toByteArray()),
+              Base64.toBase64String(logInfo.getID())));
     }
 
     X509Certificate leafCert = (X509Certificate) chain.get(0);
-    if (!CertificateInfo.isPreCertificate(leafCert)) {
-      byte[] toVerify = serializeSignedSCTData(leafCert, sct);
-      return verifySCTSignatureOverBytes(sct, toVerify);
+    Preconditions.checkArgument(
+        chain.size() >= 2, "Chain with PreCertificate must contain issuer.");
+    // PreCertificate
+    Certificate issuerCert = chain.get(1);
+    IssuerInformation issuerInformation;
+    if (!CertificateInfo.isPreCertificateSigningCert(issuerCert)) {
+      issuerInformation = issuerInformationFromCertificateIssuer(issuerCert);
     } else {
       Preconditions.checkArgument(
-          chain.size() >= 2, "Chain with PreCertificate must contain issuer.");
-      // PreCertificate
-      Certificate issuerCert = chain.get(1);
-      IssuerInformation issuerInformation;
-      if (!CertificateInfo.isPreCertificateSigningCert(issuerCert)) {
-        issuerInformation = issuerInformationFromCertificateIssuer(issuerCert);
-      } else {
-        Preconditions.checkArgument(
-            chain.size() >= 3,
-            "Chain with PreCertificate signed by PreCertificate Signing Cert must contain issuer.");
-        issuerInformation =
-            issuerInformationFromPreCertificateSigningCert(issuerCert, getKeyHash(chain.get(2)));
-      }
-      return verifySCTOverPreCertificate(sct, leafCert, issuerInformation);
+          chain.size() >= 3,
+          "Chain with PreCertificate signed by PreCertificate Signing Cert must contain issuer.");
+      issuerInformation =
+          issuerInformationFromPreCertificateSigningCert(issuerCert, getKeyHash(chain.get(2)));
     }
+    return verifySCTOverPreCertificate(sct, leafCert, issuerInformation);
   }
 
   /**
@@ -195,11 +199,6 @@ public class LogSignatureVerifier {
       X509Certificate preCertificate,
       IssuerInformation issuerInfo) {
     Preconditions.checkNotNull(issuerInfo, "At the very least, the issuer key hash is needed.");
-    //TODO(eranm): Remove this restriction after this method knows how to strip the CT
-    // extension from a final certificate.
-    Preconditions.checkArgument(
-        CertificateInfo.isPreCertificate(preCertificate),
-        "PreCertificate must contain the poison extension");
 
     TBSCertificate preCertificateTBS = createTbsForVerification(preCertificate, issuerInfo);
     try {
@@ -232,7 +231,7 @@ public class LogSignatureVerifier {
       }
 
       List<Extension> orderedExtensions =
-          getExtensionsWithoutPoison(
+          getExtensionsWithoutPoisonAndSCT(
               parsedPreCertificate.getTBSCertificate().getExtensions(),
               issuerInformation.getX509authorityKeyIdentifier());
 
@@ -269,7 +268,7 @@ public class LogSignatureVerifier {
     return extensions.getExtension(new ASN1ObjectIdentifier(X509_AUTHORITY_KEY_IDENTIFIER)) != null;
   }
 
-  private List<Extension> getExtensionsWithoutPoison(
+  private List<Extension> getExtensionsWithoutPoisonAndSCT(
       Extensions extensions, Extension replacementX509authorityKeyIdentifier) {
     ASN1ObjectIdentifier[] extensionsOidsArray = extensions.getExtensionOIDs();
     Iterator<ASN1ObjectIdentifier> extensionsOids = Arrays.asList(extensionsOidsArray).iterator();
@@ -280,6 +279,8 @@ public class LogSignatureVerifier {
       ASN1ObjectIdentifier extn = extensionsOids.next();
       String extnId = extn.getId();
       if (extnId.equals(CTConstants.POISON_EXTENSION_OID)) {
+        // Do nothing - skip copying this extension
+      } else if (extnId.equals(CTConstants.SCT_CERTIFICATE_OID)) {
         // Do nothing - skip copying this extension
       } else if ((extnId.equals(X509_AUTHORITY_KEY_IDENTIFIER))
           && (replacementX509authorityKeyIdentifier != null)) {
