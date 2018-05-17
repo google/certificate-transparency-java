@@ -146,8 +146,8 @@ public class LogSignatureVerifier {
     }
 
     X509Certificate leafCert = (X509Certificate) chain.get(0);
-    if (!CertificateInfo.isPreCertificate(leafCert) && chain.size() == 1) {
-	// Special case to verify an SCT over a self-signed certificate...
+    if (!CertificateInfo.isPreCertificate(leafCert) && !CertificateInfo.hasEmbeddedSCT(leafCert)) {
+	// When verifying final cert without embedded SCTs, we don't need the issuer but can verify directly
 	byte[] toVerify = serializeSignedSCTData(leafCert, sct);
 	return verifySCTSignatureOverBytes(sct, toVerify);
     }
