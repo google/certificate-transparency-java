@@ -132,9 +132,6 @@ public class LogSignatureVerifier {
    *       signing certificate must be 2nd on the chain, the CA cert itself 3rd.
    * </ul>
    *
-   * It does not work for verifying a final certificate with the CT extension. TODO(eranm): Add the
-   * ability to remove the CT extension and verify a final certificate.
-   *
    * @param sct SignedCertificateTimestamp received from the log.
    * @param chain The certificates chain as sent to the log.
    * @return true if the log's signature over this SCT can be verified, false otherwise.
@@ -149,6 +146,11 @@ public class LogSignatureVerifier {
     }
 
     X509Certificate leafCert = (X509Certificate) chain.get(0);
+    if (!CertificateInfo.isPreCertificate(leafCert) && chain.size() == 1) {
+	// Special case to verify an SCT over a self-signed certificate...
+	byte[] toVerify = serializeSignedSCTData(leafCert, sct);
+	return verifySCTSignatureOverBytes(sct, toVerify);
+    }
     Preconditions.checkArgument(
         chain.size() >= 2, "Chain with PreCertificate must contain issuer.");
     // PreCertificate
