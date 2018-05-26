@@ -206,7 +206,7 @@ public class HttpLogClientTest {
   @Test
   public void certificateSentToServer() throws IOException, CertificateException {
     HttpInvoker mockInvoker = mock(HttpInvoker.class);
-    when(mockInvoker.makePostRequest(eq("http://ctlog/add-chain"), Matchers.anyString()))
+    when(mockInvoker.makePostRequestAutoProxy(eq("http://ctlog/add-chain"), Matchers.anyString()))
         .thenReturn(JSON_RESPONSE);
 
     HttpLogClient client = new HttpLogClient("http://ctlog/", mockInvoker);
