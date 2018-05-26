@@ -154,7 +154,7 @@ public class HttpLogClient {
       methodPath = ADD_CHAIN_PATH;
     }
 
-    String response = postInvoker.makePostRequest(logUrl + methodPath, jsonPayload);
+    String response = postInvoker.makePostRequestAutoProxy(logUrl + methodPath, jsonPayload);
     return parseServerResponse(response);
   }
 
