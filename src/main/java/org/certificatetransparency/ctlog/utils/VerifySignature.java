@@ -84,29 +84,7 @@ public class VerifySignature {
     }
 
     // Read log keys
-    Map<String, LogInfo> logInfos = new HashMap<>();
-    File file = new File(logPublicKeyFileorDir);
-    if (file.isDirectory()) {
-      // Read all public keys in the directory into a hashmap
-      // then choose the correct one based on Log ID
-      File[] files = file.listFiles();
-      for (File keyfile : files) {
-        LogInfo logInfo = LogInfo.fromKeyFile(keyfile.getAbsolutePath());
-        String id = Base64.toBase64String(logInfo.getID());
-        System.out.println("Log ID: " + id + ", " + keyfile.getAbsolutePath());
-        if (logInfos.put(id, logInfo) != null) {
-          System.out.println(
-              "A logInfo with ID "
-                  + id
-                  + " was already present, replacing the old entry with this one.");
-        }
-      }
-    } else {
-      LogInfo logInfo = LogInfo.fromKeyFile(logPublicKeyFileorDir);
-      System.out.println(
-          "Log ID: " + Base64.toBase64String(logInfo.getID()) + ", " + file.getAbsolutePath());
-      logInfos.put(Base64.toBase64String(logInfo.getID()), logInfo);
-    }
+    Map<String, LogInfo> logInfos = readLogKeys(logPublicKeyFileorDir);
 
     // Verify the SCTs one at a time
     boolean success = true;
@@ -134,6 +112,40 @@ public class VerifySignature {
     if (!success) {
       System.exit(-1);
     }
+  }
+
+  /**
+   * Reads CT log public key from a file, or all keys that reside in a directory
+   *
+   * @param logPublicKeyFileorDir a public key PEM file or a directory with public key PEM files
+   * @return Map with id, LogInfo, a LogInfo can thus be obtained from the map if you know the log
+   *     ID
+   */
+  private static Map<String, LogInfo> readLogKeys(String logPublicKeyFileorDir) {
+    Map<String, LogInfo> logInfos = new HashMap<>();
+    File file = new File(logPublicKeyFileorDir);
+    if (file.isDirectory()) {
+      // Read all public keys in the directory into a hashmap
+      // then choose the correct one based on Log ID
+      File[] files = file.listFiles();
+      for (File keyfile : files) {
+        LogInfo logInfo = LogInfo.fromKeyFile(keyfile.getAbsolutePath());
+        String id = Base64.toBase64String(logInfo.getID());
+        System.out.println("Log ID: " + id + ", " + keyfile.getAbsolutePath());
+        if (logInfos.put(id, logInfo) != null) {
+          System.out.println(
+              "A logInfo with ID "
+                  + id
+                  + " was already present, replacing the old entry with this one.");
+        }
+      }
+    } else {
+      LogInfo logInfo = LogInfo.fromKeyFile(logPublicKeyFileorDir);
+      System.out.println(
+          "Log ID: " + Base64.toBase64String(logInfo.getID()) + ", " + file.getAbsolutePath());
+      logInfos.put(Base64.toBase64String(logInfo.getID()), logInfo);
+    }
+    return logInfos;
   }
 
   private static Ct.SignedCertificateTimestamp[] parseSCTsFromCert(byte[] extensionvalue)
