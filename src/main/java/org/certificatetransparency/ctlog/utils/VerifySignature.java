@@ -58,15 +58,7 @@ public class VerifySignature {
       if (CertificateInfo.hasEmbeddedSCT(leafCert)) {
         // Get the SCT(s) from the certificate
         System.out.println("The leafcert does have some SCTs");
-        byte[] bytes = leafCert.getExtensionValue(CTConstants.SCT_CERTIFICATE_OID);
-        ASN1Primitive p =
-            ASN1Primitive.fromByteArray(ASN1OctetString.getInstance(bytes).getOctets());
-        DEROctetString o = (DEROctetString) p;
-        // These are serialized SCTs, we must de-serialize them into an array with one SCT each
-        Ct.SignedCertificateTimestamp[] sctsFromCert = parseSCTsFromCert(o.getOctets());
-        for (Ct.SignedCertificateTimestamp signedCertificateTimestamp : sctsFromCert) {
-          scts.add(signedCertificateTimestamp);
-        }
+        scts = parseSCTsFromCert(leafCert);
       }
     } else {
       sctBytes = Files.toByteArray(new File(sctFile));
@@ -114,6 +106,20 @@ public class VerifySignature {
     }
   }
 
+  public static List<Ct.SignedCertificateTimestamp> parseSCTsFromCert(X509Certificate leafCert)
+      throws IOException {
+    byte[] bytes = leafCert.getExtensionValue(CTConstants.SCT_CERTIFICATE_OID);
+    List<Ct.SignedCertificateTimestamp> scts = new ArrayList<>();
+    ASN1Primitive p = ASN1Primitive.fromByteArray(ASN1OctetString.getInstance(bytes).getOctets());
+    DEROctetString o = (DEROctetString) p;
+    // These are serialized SCTs, we must de-serialize them into an array with one SCT each
+    Ct.SignedCertificateTimestamp[] sctsFromCert = parseSCTsFromCertExtension(o.getOctets());
+    for (Ct.SignedCertificateTimestamp signedCertificateTimestamp : sctsFromCert) {
+      scts.add(signedCertificateTimestamp);
+    }
+    return scts;
+  }
+
   /**
    * Reads CT log public key from a file, or all keys that reside in a directory
    *
@@ -148,7 +154,7 @@ public class VerifySignature {
     return logInfos;
   }
 
-  private static Ct.SignedCertificateTimestamp[] parseSCTsFromCert(byte[] extensionvalue)
+  private static Ct.SignedCertificateTimestamp[] parseSCTsFromCertExtension(byte[] extensionvalue)
       throws IOException {
     List<Ct.SignedCertificateTimestamp> sctList = new ArrayList<Ct.SignedCertificateTimestamp>();
     ByteArrayInputStream bis = new ByteArrayInputStream(extensionvalue);

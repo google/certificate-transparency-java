@@ -141,9 +141,9 @@ public class LogSignatureVerifier {
 
     X509Certificate leafCert = (X509Certificate) chain.get(0);
     if (!CertificateInfo.isPreCertificate(leafCert) && !CertificateInfo.hasEmbeddedSCT(leafCert)) {
-	// When verifying final cert without embedded SCTs, we don't need the issuer but can verify directly
-	byte[] toVerify = serializeSignedSCTData(leafCert, sct);
-	return verifySCTSignatureOverBytes(sct, toVerify);
+      // When verifying final cert without embedded SCTs, we don't need the issuer but can verify directly
+      byte[] toVerify = serializeSignedSCTData(leafCert, sct);
+      return verifySCTSignatureOverBytes(sct, toVerify);
     }
     Preconditions.checkArgument(
         chain.size() >= 2, "Chain with PreCertificate or Certificate must contain issuer.");
@@ -151,7 +151,7 @@ public class LogSignatureVerifier {
     Certificate issuerCert = chain.get(1);
     IssuerInformation issuerInformation;
     if (!CertificateInfo.isPreCertificateSigningCert(issuerCert)) {
-    	// If signed by the real issuing CA
+      // If signed by the real issuing CA
       issuerInformation = issuerInformationFromCertificateIssuer(issuerCert);
     } else {
       Preconditions.checkArgument(
@@ -185,10 +185,11 @@ public class LogSignatureVerifier {
    * Verifies the CT Log's signature over the SCT and the PreCertificate, or a final certificate.
    *
    * @param sct SignedCertificateTimestamp received from the log.
-   * @param certificate the PreCertificate sent to the log for addition, or the final certificate with the embedded SCTs.
-   * @param issuerInfo Information on the issuer which will (or did) ultimately sign this PreCertificate. If
-   *     the PreCertificate was signed using by a PreCertificate Signing Cert, the issuerInfo
-   *     contains data on the final CA certificate used for signing.
+   * @param certificate the PreCertificate sent to the log for addition, or the final certificate
+   *     with the embedded SCTs.
+   * @param issuerInfo Information on the issuer which will (or did) ultimately sign this
+   *     PreCertificate. If the PreCertificate was signed using by a PreCertificate Signing Cert,
+   *     the issuerInfo contains data on the final CA certificate used for signing.
    * @return true if the SCT verifies, false otherwise.
    */
   boolean verifySCTOverPreCertificate(
