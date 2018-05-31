@@ -22,14 +22,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1Primitive;
-import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.util.ASN1Dump;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
@@ -152,11 +146,12 @@ public class LogSignatureVerifier {
 	return verifySCTSignatureOverBytes(sct, toVerify);
     }
     Preconditions.checkArgument(
-        chain.size() >= 2, "Chain with PreCertificate must contain issuer.");
-    // PreCertificate
+        chain.size() >= 2, "Chain with PreCertificate or Certificate must contain issuer.");
+    // PreCertificate or final certificate with embedded SCTs, we want the issuerInformation
     Certificate issuerCert = chain.get(1);
     IssuerInformation issuerInformation;
     if (!CertificateInfo.isPreCertificateSigningCert(issuerCert)) {
+    	// If signed by the real issuing CA
       issuerInformation = issuerInformationFromCertificateIssuer(issuerCert);
     } else {
       Preconditions.checkArgument(
@@ -187,22 +182,22 @@ public class LogSignatureVerifier {
   }
 
   /**
-   * Verifies the CT Log's signature over the SCT and PreCertificate.
+   * Verifies the CT Log's signature over the SCT and the PreCertificate, or a final certificate.
    *
    * @param sct SignedCertificateTimestamp received from the log.
-   * @param preCertificate PreCertificate sent to the log for addition.
-   * @param issuerInfo Information on the issuer which will ultimately sign this PreCertificate. If
+   * @param certificate the PreCertificate sent to the log for addition, or the final certificate with the embedded SCTs.
+   * @param issuerInfo Information on the issuer which will (or did) ultimately sign this PreCertificate. If
    *     the PreCertificate was signed using by a PreCertificate Signing Cert, the issuerInfo
    *     contains data on the final CA certificate used for signing.
    * @return true if the SCT verifies, false otherwise.
    */
   boolean verifySCTOverPreCertificate(
       Ct.SignedCertificateTimestamp sct,
-      X509Certificate preCertificate,
+      X509Certificate certificate,
       IssuerInformation issuerInfo) {
     Preconditions.checkNotNull(issuerInfo, "At the very least, the issuer key hash is needed.");
 
-    TBSCertificate preCertificateTBS = createTbsForVerification(preCertificate, issuerInfo);
+    TBSCertificate preCertificateTBS = createTbsForVerification(certificate, issuerInfo);
     try {
       byte[] toVerify =
           serializeSignedSCTDataForPreCertificate(
