@@ -2,6 +2,7 @@ package org.certificatetransparency.ctlog;
 
 import static org.certificatetransparency.ctlog.serialization.CTConstants.POISON_EXTENSION_OID;
 import static org.certificatetransparency.ctlog.serialization.CTConstants.PRECERTIFICATE_SIGNING_OID;
+import static org.certificatetransparency.ctlog.serialization.CTConstants.SCT_CERTIFICATE_OID;
 
 import java.security.cert.Certificate;
 import java.security.cert.CertificateParsingException;
@@ -24,5 +25,11 @@ public class CertificateInfo {
     X509Certificate x509PreCertificate = (X509Certificate) certificate;
     return (x509PreCertificate.getCriticalExtensionOIDs() != null)
         && x509PreCertificate.getCriticalExtensionOIDs().contains(POISON_EXTENSION_OID);
+  }
+
+  public static boolean hasEmbeddedSCT(Certificate certificate) {
+    X509Certificate x509Certificate = (X509Certificate) certificate;
+    return (x509Certificate.getNonCriticalExtensionOIDs() != null)
+        && x509Certificate.getNonCriticalExtensionOIDs().contains(SCT_CERTIFICATE_OID);
   }
 }

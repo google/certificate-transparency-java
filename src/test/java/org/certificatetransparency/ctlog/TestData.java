@@ -16,6 +16,12 @@ public class TestData {
   // Public log key
   public static final String TEST_LOG_KEY = DATA_ROOT + "ct-server-key-public.pem";
   public static final String TEST_LOG_KEY_RSA = DATA_ROOT + "rsa/ct-server-key-public-rsa.pem";
+  public static final String TEST_LOG_KEY_PILOT =
+      DATA_ROOT + "google-ct-pilot-server-key-public.pem";
+  public static final String TEST_LOG_KEY_SKYDIVER =
+      DATA_ROOT + "google-ct-skydiver-server-key-public.pem";
+  public static final String TEST_LOG_KEY_DIGICERT =
+      DATA_ROOT + "digicert-ct-server-key-public.pem";
   // Root CA cert.
   public static final String ROOT_CA_CERT = DATA_ROOT + "ca-cert.pem";
   // Ordinary cert signed by ca-cert, with SCT served separately.
@@ -39,6 +45,8 @@ public class TestData {
   public static final String TEST_INTERMEDIATE_CERT = DATA_ROOT + "test-intermediate-cert.pem";
   public static final String TEST_INTERMEDIATE_CERT_SCT =
       DATA_ROOT + "test-intermediate-cert.proof";
+  public static final String TEST_EMBEDDED_WITH_INTERMEDIATE_CERT =
+      DATA_ROOT + "test-embedded-with-intermediate-cert.pem";
 
   public static final String TEST_PRE_CERT_SIGNED_BY_INTERMEDIATE =
       DATA_ROOT + "test-embedded-with-intermediate-pre-cert.pem";
@@ -52,6 +60,7 @@ public class TestData {
   public static final String TEST_PRE_CERT_SIGNED_BY_PRECA_INTERMEDIATE_SCT =
       DATA_ROOT + "test-embedded-with-intermediate-preca-pre-cert.proof";
   public static final String TEST_ROOT_CERTS = DATA_ROOT + "test-root-certs";
+  public static final String TEST_GITHUB_CHAIN = DATA_ROOT + "github-chain.pem";
 
   static List<Certificate> loadCertificates(String filename) {
     File file = new File(TestData.class.getResource(filename).getFile());
@@ -67,6 +76,7 @@ public class TestData {
   }
 
   public static String fileName(String name) {
+    System.out.println(name);
     return TestData.class.getResource(name).getFile();
   }
 }

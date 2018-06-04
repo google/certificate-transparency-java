@@ -11,6 +11,9 @@ import static org.certificatetransparency.ctlog.TestData.TEST_INTERMEDIATE_CERT;
 import static org.certificatetransparency.ctlog.TestData.TEST_INTERMEDIATE_CERT_SCT;
 import static org.certificatetransparency.ctlog.TestData.TEST_LOG_KEY;
 import static org.certificatetransparency.ctlog.TestData.TEST_LOG_KEY_RSA;
+import static org.certificatetransparency.ctlog.TestData.TEST_LOG_KEY_PILOT;
+import static org.certificatetransparency.ctlog.TestData.TEST_LOG_KEY_SKYDIVER;
+import static org.certificatetransparency.ctlog.TestData.TEST_LOG_KEY_DIGICERT;
 import static org.certificatetransparency.ctlog.TestData.TEST_PRE_CERT;
 import static org.certificatetransparency.ctlog.TestData.TEST_PRE_CERT_PRECA_SCT;
 import static org.certificatetransparency.ctlog.TestData.TEST_PRE_CERT_SIGNED_BY_INTERMEDIATE;
@@ -20,31 +23,37 @@ import static org.certificatetransparency.ctlog.TestData.TEST_PRE_CERT_SIGNED_BY
 import static org.certificatetransparency.ctlog.TestData.TEST_PRE_CERT_SIGNED_BY_PRECA_INTERMEDIATE_SCT;
 import static org.certificatetransparency.ctlog.TestData.TEST_PRE_SCT;
 import static org.certificatetransparency.ctlog.TestData.TEST_PRE_SCT_RSA;
+import static org.certificatetransparency.ctlog.TestData.TEST_GITHUB_CHAIN;
 import static org.certificatetransparency.ctlog.TestData.loadCertificates;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import com.google.common.io.Files;
-import org.certificatetransparency.ctlog.proto.Ct;
-import org.certificatetransparency.ctlog.serialization.Deserializer;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
-
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import org.bouncycastle.util.encoders.Base64;
+import org.certificatetransparency.ctlog.proto.Ct;
+import org.certificatetransparency.ctlog.serialization.Deserializer;
+import org.certificatetransparency.ctlog.utils.VerifySignature;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
+
+import com.google.common.io.Files;
 
 /**
  * This test verifies that the data is correctly serialized for signature comparison, so signature
@@ -62,6 +71,21 @@ public class LogSignatureVerifierTest {
   private LogSignatureVerifier getVerifierRSA() {
     LogInfo logInfo = LogInfo.fromKeyFile(TestData.fileName(TEST_LOG_KEY_RSA));
     return new LogSignatureVerifier(logInfo);
+  }
+
+  /** Returns a Map of LogInfos with all log keys to verify the Github certificate */
+  private Map<String, LogInfo> getLogInfosGitHub() {
+    Map<String, LogInfo> logInfos = new HashMap<>();
+    LogInfo logInfo = LogInfo.fromKeyFile(TestData.fileName(TEST_LOG_KEY_PILOT));
+    String id = Base64.toBase64String(logInfo.getID());
+    logInfos.put(id, logInfo);
+    logInfo = LogInfo.fromKeyFile(TestData.fileName(TEST_LOG_KEY_SKYDIVER));
+    id = Base64.toBase64String(logInfo.getID());
+    logInfos.put(id, logInfo);
+    logInfo = LogInfo.fromKeyFile(TestData.fileName(TEST_LOG_KEY_DIGICERT));
+    id = Base64.toBase64String(logInfo.getID());
+    logInfos.put(id, logInfo);
+    return logInfos;
   }
 
   /** Tests for package-visible methods. */
@@ -252,6 +276,39 @@ public class LogSignatureVerifierTest {
       assertTrue(
           "Expected exception to warn about missing issuer cert",
           expected.getMessage().contains("must contain issuer"));
+    }
+  }
+
+  @Test
+  public void signatureOnEmbeddedSCTsInFinalCertificateVerifies()
+      throws IOException, CertificateEncodingException {
+    // Flow:
+    // github-chain.txt contains leaf certificate signed by issuing CA.
+    // Leafcert contains three embedded SCTs, we verify them all
+    List<Certificate> certsChain = new ArrayList<>();
+    certsChain.addAll(loadCertificates(TEST_GITHUB_CHAIN));
+
+    // the leaf cert is the first one in this test data
+    X509Certificate leafcert = (X509Certificate) certsChain.get(0);
+    Certificate issuerCert = certsChain.get(1);
+    assertTrue(
+        "The test certificate does have embedded SCTs", CertificateInfo.hasEmbeddedSCT(leafcert));
+    List<Ct.SignedCertificateTimestamp> scts = VerifySignature.parseSCTsFromCert(leafcert);
+    assertEquals("Expected 3 SCTs in the test certificate", 3, scts.size());
+    Map<String, LogInfo> logInfos = getLogInfosGitHub();
+    for (Ct.SignedCertificateTimestamp sct : scts) {
+      String id = Base64.toBase64String(sct.getId().getKeyId().toByteArray());
+      LogInfo logInfo = logInfos.get(id);
+      System.out.println(id);
+      LogSignatureVerifier verifier = new LogSignatureVerifier(logInfo);
+
+      assertTrue(
+          "Expected signature to verify OK",
+          verifier.verifySCTOverPreCertificate(
+              sct,
+              leafcert,
+              LogSignatureVerifier.issuerInformationFromCertificateIssuer(issuerCert)));
+      assertTrue("Expected PreCertificate to verify OK", verifier.verifySignature(sct, certsChain));
     }
   }
 }

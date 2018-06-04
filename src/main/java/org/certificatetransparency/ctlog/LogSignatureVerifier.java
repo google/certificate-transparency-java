@@ -6,19 +6,6 @@ import static org.certificatetransparency.ctlog.serialization.CTConstants.MAX_EX
 import static org.certificatetransparency.ctlog.serialization.CTConstants.TIMESTAMP_LENGTH;
 import static org.certificatetransparency.ctlog.serialization.CTConstants.VERSION_LENGTH;
 
-import com.google.common.base.Preconditions;
-
-import org.bouncycastle.asn1.ASN1InputStream;
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.Extensions;
-import org.bouncycastle.asn1.x509.TBSCertificate;
-import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
-import org.certificatetransparency.ctlog.proto.Ct;
-import org.certificatetransparency.ctlog.serialization.CTConstants;
-import org.certificatetransparency.ctlog.serialization.Serializer;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.InvalidKeyException;
@@ -34,6 +21,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+
+import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.asn1.x509.TBSCertificate;
+import org.bouncycastle.asn1.x509.V3TBSCertificateGenerator;
+import org.bouncycastle.util.encoders.Base64;
+import org.certificatetransparency.ctlog.proto.Ct;
+import org.certificatetransparency.ctlog.serialization.CTConstants;
+import org.certificatetransparency.ctlog.serialization.Serializer;
+
+import com.google.common.base.Preconditions;
 
 /** Verifies signatures from a given CT Log. */
 public class LogSignatureVerifier {
@@ -125,41 +126,41 @@ public class LogSignatureVerifier {
    *       signing certificate must be 2nd on the chain, the CA cert itself 3rd.
    * </ul>
    *
-   * It does not work for verifying a final certificate with the CT extension. TODO(eranm): Add the
-   * ability to remove the CT extension and verify a final certificate.
-   *
    * @param sct SignedCertificateTimestamp received from the log.
    * @param chain The certificates chain as sent to the log.
    * @return true if the log's signature over this SCT can be verified, false otherwise.
    */
   public boolean verifySignature(Ct.SignedCertificateTimestamp sct, List<Certificate> chain) {
-    if (!logInfo.isSameLogId(sct.getId().getKeyId().toByteArray())) {
+    if (sct != null && !logInfo.isSameLogId(sct.getId().getKeyId().toByteArray())) {
       throw new CertificateTransparencyException(
           String.format(
-              "Log ID of SCT (%s) does not match this log's ID.", sct.getId().getKeyId()));
+              "Log ID of SCT (%s) does not match this log's ID (%s).",
+              Base64.toBase64String(sct.getId().getKeyId().toByteArray()),
+              Base64.toBase64String(logInfo.getID())));
     }
 
     X509Certificate leafCert = (X509Certificate) chain.get(0);
-    if (!CertificateInfo.isPreCertificate(leafCert)) {
+    if (!CertificateInfo.isPreCertificate(leafCert) && !CertificateInfo.hasEmbeddedSCT(leafCert)) {
+      // When verifying final cert without embedded SCTs, we don't need the issuer but can verify directly
       byte[] toVerify = serializeSignedSCTData(leafCert, sct);
       return verifySCTSignatureOverBytes(sct, toVerify);
+    }
+    Preconditions.checkArgument(
+        chain.size() >= 2, "Chain with PreCertificate or Certificate must contain issuer.");
+    // PreCertificate or final certificate with embedded SCTs, we want the issuerInformation
+    Certificate issuerCert = chain.get(1);
+    IssuerInformation issuerInformation;
+    if (!CertificateInfo.isPreCertificateSigningCert(issuerCert)) {
+      // If signed by the real issuing CA
+      issuerInformation = issuerInformationFromCertificateIssuer(issuerCert);
     } else {
       Preconditions.checkArgument(
-          chain.size() >= 2, "Chain with PreCertificate must contain issuer.");
-      // PreCertificate
-      Certificate issuerCert = chain.get(1);
-      IssuerInformation issuerInformation;
-      if (!CertificateInfo.isPreCertificateSigningCert(issuerCert)) {
-        issuerInformation = issuerInformationFromCertificateIssuer(issuerCert);
-      } else {
-        Preconditions.checkArgument(
-            chain.size() >= 3,
-            "Chain with PreCertificate signed by PreCertificate Signing Cert must contain issuer.");
-        issuerInformation =
-            issuerInformationFromPreCertificateSigningCert(issuerCert, getKeyHash(chain.get(2)));
-      }
-      return verifySCTOverPreCertificate(sct, leafCert, issuerInformation);
+          chain.size() >= 3,
+          "Chain with PreCertificate signed by PreCertificate Signing Cert must contain issuer.");
+      issuerInformation =
+          issuerInformationFromPreCertificateSigningCert(issuerCert, getKeyHash(chain.get(2)));
     }
+    return verifySCTOverPreCertificate(sct, leafCert, issuerInformation);
   }
 
   /**
@@ -181,27 +182,23 @@ public class LogSignatureVerifier {
   }
 
   /**
-   * Verifies the CT Log's signature over the SCT and PreCertificate.
+   * Verifies the CT Log's signature over the SCT and the PreCertificate, or a final certificate.
    *
    * @param sct SignedCertificateTimestamp received from the log.
-   * @param preCertificate PreCertificate sent to the log for addition.
-   * @param issuerInfo Information on the issuer which will ultimately sign this PreCertificate. If
-   *     the PreCertificate was signed using by a PreCertificate Signing Cert, the issuerInfo
-   *     contains data on the final CA certificate used for signing.
+   * @param certificate the PreCertificate sent to the log for addition, or the final certificate
+   *     with the embedded SCTs.
+   * @param issuerInfo Information on the issuer which will (or did) ultimately sign this
+   *     PreCertificate. If the PreCertificate was signed using by a PreCertificate Signing Cert,
+   *     the issuerInfo contains data on the final CA certificate used for signing.
    * @return true if the SCT verifies, false otherwise.
    */
   boolean verifySCTOverPreCertificate(
       Ct.SignedCertificateTimestamp sct,
-      X509Certificate preCertificate,
+      X509Certificate certificate,
       IssuerInformation issuerInfo) {
     Preconditions.checkNotNull(issuerInfo, "At the very least, the issuer key hash is needed.");
-    //TODO(eranm): Remove this restriction after this method knows how to strip the CT
-    // extension from a final certificate.
-    Preconditions.checkArgument(
-        CertificateInfo.isPreCertificate(preCertificate),
-        "PreCertificate must contain the poison extension");
 
-    TBSCertificate preCertificateTBS = createTbsForVerification(preCertificate, issuerInfo);
+    TBSCertificate preCertificateTBS = createTbsForVerification(certificate, issuerInfo);
     try {
       byte[] toVerify =
           serializeSignedSCTDataForPreCertificate(
@@ -232,7 +229,7 @@ public class LogSignatureVerifier {
       }
 
       List<Extension> orderedExtensions =
-          getExtensionsWithoutPoison(
+          getExtensionsWithoutPoisonAndSCT(
               parsedPreCertificate.getTBSCertificate().getExtensions(),
               issuerInformation.getX509authorityKeyIdentifier());
 
@@ -269,7 +266,7 @@ public class LogSignatureVerifier {
     return extensions.getExtension(new ASN1ObjectIdentifier(X509_AUTHORITY_KEY_IDENTIFIER)) != null;
   }
 
-  private List<Extension> getExtensionsWithoutPoison(
+  private List<Extension> getExtensionsWithoutPoisonAndSCT(
       Extensions extensions, Extension replacementX509authorityKeyIdentifier) {
     ASN1ObjectIdentifier[] extensionsOidsArray = extensions.getExtensionOIDs();
     Iterator<ASN1ObjectIdentifier> extensionsOids = Arrays.asList(extensionsOidsArray).iterator();
@@ -280,6 +277,8 @@ public class LogSignatureVerifier {
       ASN1ObjectIdentifier extn = extensionsOids.next();
       String extnId = extn.getId();
       if (extnId.equals(CTConstants.POISON_EXTENSION_OID)) {
+        // Do nothing - skip copying this extension
+      } else if (extnId.equals(CTConstants.SCT_CERTIFICATE_OID)) {
         // Do nothing - skip copying this extension
       } else if ((extnId.equals(X509_AUTHORITY_KEY_IDENTIFIER))
           && (replacementX509authorityKeyIdentifier != null)) {
