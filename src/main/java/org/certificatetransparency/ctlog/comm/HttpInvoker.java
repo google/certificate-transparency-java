@@ -46,16 +46,15 @@ public class HttpInvoker {
    * @return Server's response body.
    */
   public String makePostRequestAutoProxy(String url, String jsonPayload) {
-    RestTemplate restTemplate = new RestTemplate();
+    try (CloseableHttpClient httpClient = HttpClientBuilder.create().useSystemProperties().build()) {
+      HttpPost post = new HttpPost(url);
+      post.setEntity(new StringEntity(jsonPayload, "utf-8"));
+      post.addHeader("Content-Type", "application/json; charset=utf-8");
 
-    HttpHeaders headers = new HttpHeaders();
-    headers.add("Content-Type", "application/json; charset=utf-8");
-
-    HttpEntity<String> entity = new HttpEntity<>(jsonPayload, headers);
-
-    ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-
-    return response.getBody();
+      return httpClient.execute(post, new BasicResponseHandler());
+    } catch (IOException e) {
+      throw new LogCommunicationException("Error making POST request to " + url, e);
+    }
   }
 
   /**
