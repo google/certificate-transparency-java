@@ -11,6 +11,10 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 
 /** Simple delegator to HttpClient, so it can be mocked */
 public class HttpInvoker {
@@ -35,7 +39,7 @@ public class HttpInvoker {
 
   /**
    * Make an HTTP POST method call to the given URL with the provided JSON payload. This method uses
-   * useSystemProperties() option from HttpClientBuilder.
+   * RestTemplate, which uses the system proxy automatically.
    *
    * @param url URL for POST method
    * @param jsonPayload Serialized JSON payload.
