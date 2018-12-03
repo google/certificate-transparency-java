@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLHandshakeException;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
@@ -102,6 +103,10 @@ public class SslConnectionCheckingTest {
           break;
         default:
           fail(String.format("Unexpected HTTP status code: %d", statusCode));
+      }
+    } catch (SSLHandshakeException e) {
+      if (shouldPass) {
+        fail(urlString + " " + e.toString());
       }
     } catch (IOException e) {
       fail(e.toString());
