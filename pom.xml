@@ -63,6 +63,14 @@
             <name>Ximin Luo</name>
             <email>infinity0@gmx.com</email>
         </developer>
+        <developer>
+            <name>Donald J. Patterson</name>
+            <email>d_j_p_3@djp3.net</email>
+        </developer>
+        <developer>
+            <name>Warwick Hunter</name>
+            <email>whunter@anonyome.com</email>
+        </developer>
     </developers>
 
     <scm>

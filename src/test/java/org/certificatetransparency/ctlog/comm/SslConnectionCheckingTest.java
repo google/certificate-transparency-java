@@ -46,10 +46,10 @@ import org.junit.runners.JUnit4;
  * <ul>
  *   <li>X509v3 certificate extension
  *   <li>TLS extension
- *   <li>OSCP stapling 
+ *   <li>OCSP stapling
  * </ul>
  *
- *  This test only demonstrates how to validate using the first approach.
+ * This test only demonstrates how to validate using the first approach.
  *
  * @author Warwick Hunter
  * @since 0.1.3
@@ -137,7 +137,7 @@ public class SslConnectionCheckingTest {
       List<Ct.SignedCertificateTimestamp> sctsInCertificate =
           VerifySignature.parseSCTsFromCert(leafCertificate);
       if (sctsInCertificate.size() < MIN_VALID_SCTS) {
-        v("  Too few SCTs are present, I want at least 2 CT logs to be nominated.");
+        v("  Too few SCTs are present, I want at least " + MIN_VALID_SCTS + " CT logs to vouch for this certificate.");
         return false;
       }
 
@@ -157,7 +157,7 @@ public class SslConnectionCheckingTest {
       }
 
       if (validSctCount < MIN_VALID_SCTS) {
-        v("  Too few trusted SCTs are present, I want at least 2 trusted CT logs.");
+        v("  Too few SCTs are present, I want at least " + MIN_VALID_SCTS + " CT logs to vouch for this certificate.");
       }
       return validSctCount >= MIN_VALID_SCTS;
 
@@ -171,7 +171,7 @@ public class SslConnectionCheckingTest {
 
   // A collection of CT logs that are trusted for the purposes of this test. Derived from
   // https://www.certificate-transparency.org/known-logs -> https://www.gstatic.com/ct/log_list/log_list.json
-  private static String[] TRUSTED_LOG_KEYS = {
+  private static final String[] TRUSTED_LOG_KEYS = {
     // Comodo 'Sabre' CT log : https://ct.grahamedgecombe.com/logs/34
     "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8m/SiQ8/xfiHHqtls9m7FyOMBg4JVZY9CgiixXGz0akvKD6DEL8S0ERmFe9U4ZiA0M4kbT5nmuk3I85Sk4bagA==",
     //"Comodo 'Mammoth' CT log", https://mammoth.ct.comodo.com/",
