@@ -28,7 +28,7 @@ To add this dependency to your project's POM:
 
 ## Known Issues
 
-- Does not support Android. Alternatives exist for use on Android, such as:
+- It does not support Android. Alternatives exist for use on Android, such as:
   - https://github.com/anonyome/certificate-transparency-android
   - https://github.com/Babylonpartners/certificate-transparency-android
 
