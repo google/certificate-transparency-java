@@ -14,6 +14,13 @@ import org.apache.http.impl.client.HttpClientBuilder;
 
 /** Simple delegator to HttpClient, so it can be mocked */
 public class HttpInvoker {
+
+  private final HttpClientBuilder httpClientBuilder;
+
+  public HttpInvoker() {
+    httpClientBuilder = HttpClientBuilder.create().useSystemProperties();
+  }
+
   /**
    * Make an HTTP POST method call to the given URL with the provided JSON payload.
    *
@@ -22,7 +29,7 @@ public class HttpInvoker {
    * @return Server's response body.
    */
   public String makePostRequest(String url, String jsonPayload) {
-    try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
+    try (CloseableHttpClient httpClient = httpClientBuilder.build()) {
       HttpPost post = new HttpPost(url);
       post.setEntity(new StringEntity(jsonPayload, "utf-8"));
       post.addHeader("Content-Type", "application/json; charset=utf-8");
@@ -51,7 +58,7 @@ public class HttpInvoker {
    * @return Server's response body.
    */
   public String makeGetRequest(String url, List<NameValuePair> params) {
-    try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
+    try (CloseableHttpClient httpClient = httpClientBuilder.build()) {
       String paramsStr = "";
       if (params != null) {
         paramsStr = "?" + URLEncodedUtils.format(params, "UTF-8");
